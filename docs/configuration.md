@@ -12,7 +12,7 @@ All settings are environment variables, read at startup. Empty or unset means th
 | `PORT` | `8080` | Listening port of the Node process |
 | `BRAND_NAME` | `Mail Setup` | Name shown in the UI. This is the fallback shown to your users: set your own |
 | `BRAND_LOGO_URL` | empty | `/img/...` path or absolute https URL; empty = text name + neutral icon |
-| `BRAND_ACCENT` | `#2563eb` | Accent colour, `#rgb` or `#rrggbb` |
+| `BRAND_ACCENT` | `#004AAD` | Accent colour, `#rgb` or `#rrggbb` |
 | `MAIL_HOST` | `mail.example.com` | Default for IMAP, SMTP, webmail and DAV hosts |
 | `IMAP_HOST` / `IMAP_PORT` / `IMAP_SECURITY` | `MAIL_HOST` / `993` / `SSL/TLS` | Incoming server |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURITY` | `MAIL_HOST` / `465` / `SSL/TLS` | Outgoing server |
@@ -37,7 +37,7 @@ All settings are environment variables, read at startup. Empty or unset means th
 ## Branding
 
 - `BRAND_NAME`: name in the UI and default for `PROFILE_ORGANIZATION`.
-- `BRAND_ACCENT`: `#rgb` or `#rrggbb`, served through the generated `/brand.css`.
+- `BRAND_ACCENT`: `#rgb` or `#rrggbb`, served through the generated `/brand.css`. It is the colour of buttons and main surfaces with white text on top, so choose one that keeps a contrast of at least 4.5:1 with white.
 - `BRAND_LOGO_URL`: a local path such as `/img/logo.svg` (file baked into the image or mounted under `public/img`), or an absolute https URL. For a remote URL its origin is added to the CSP `img-src` automatically. Empty gives the text name and a neutral icon.
 - `SUPPORT_PHONE`, `SUPPORT_EMAIL`, `SUPPORT_HOURS`, `SUPPORT_ADDRESS`: shown to users, each hidden when empty.
 
