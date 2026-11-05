@@ -75,7 +75,7 @@ const config = {
   port: int('PORT', 8080),
   brand: BRAND,
   brandLogoUrl: logoUrl(env('BRAND_LOGO_URL', '')),
-  brandAccent: color(env('BRAND_ACCENT', ''), '#2563eb'),
+  brandAccent: color(env('BRAND_ACCENT', ''), '#004AAD'),
   davPreset: PRESET,
   imap: {
     host: env('IMAP_HOST', MAIL_HOST),

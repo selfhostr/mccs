@@ -73,7 +73,9 @@ const files = new Map();
 // Feuille générée : couleur d'accent (BRAND_ACCENT). Fichier séparé plutôt qu'un style inline,
 // pour respecter la CSP (style-src 'self'). Incluse dans le hash de cache-busting ci-dessous.
 {
-  const body = Buffer.from(`:root { --accent: ${config.brandAccent}; }\n`);
+  // Marque par défaut : texte d'accent clair (#7AA7F0) sur fond sombre. Autre couleur : éclaircie par le CSS.
+  const ink = config.brandAccent.toLowerCase() === '#004aad' ? ' --accent-ink: #7aa7f0;' : '';
+  const body = Buffer.from(`:root { --accent: ${config.brandAccent};${ink} }\n`);
   files.set('/brand.css', { body, gz: zlib.gzipSync(body, { level: 9 }), type: TYPES['.css'], ext: '.css' });
 }
 
