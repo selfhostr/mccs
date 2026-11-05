@@ -88,7 +88,7 @@ function detectDevice() {
 
 /* ---------- État ---------- */
 const DEFAULT_CFG = {
-  brand: 'Mail Setup',
+  brand: 'mccs',
   brandLogoUrl: '',
   davPreset: 'mdaemon',
   organization: '',

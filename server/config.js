@@ -69,7 +69,7 @@ function logoUrl(v) {
   return '';
 }
 
-const BRAND = env('BRAND_NAME', 'Mail Setup');
+const BRAND = env('BRAND_NAME', 'mccs');
 
 const config = {
   port: int('PORT', 8080),
