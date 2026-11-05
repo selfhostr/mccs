@@ -506,8 +506,11 @@ body.has-gnav .site-footer { padding-bottom: 16px; }
 
 /* ===== Cibles tactiles : 40 px au minimum ===== */
 .link-btn, .link-plain, .shot-toggle, .shot-close, .nav-link, .view-back a, .who-edit,
-.name-opt summary, .opts summary, .about summary, .qr-mini summary, .tips summary, .guide-links a,
+.name-opt summary, .opts summary, .about summary, .qr-mini summary, .guide-links a,
 .site-footer a, .chip span, .stepper a { display: inline-flex; align-items: center; min-height: 40px; }
 .stepper a { display: flex; }
 .chip span { display: inline-flex; }
-.tips summary, .opts summary, .about summary, .name-opt summary { display: flex; }
+.about summary, .name-opt summary { display: flex; }
+/* .tips garde sa puce native (list-item) ; .opts reste en bloc pour conserver les espaces entre texte, gras et lien. */
+.tips summary { display: list-item; min-height: 40px; padding: 9px 0; }
+.opts summary { display: block; min-height: 40px; padding: 9px 0; }
