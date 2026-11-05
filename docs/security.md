@@ -30,12 +30,19 @@ openssl smime -sign -signer cert.pem -inkey key.pem -certfile chain.pem \
   -nodetach -outform der -in profile.mobileconfig -out signed.mobileconfig
 ```
 
-The server does not sign on the fly (TODO); sign at a dedicated step or in front of the app, using a certificate trusted by Apple devices.
+The server does not sign on the fly; sign at a dedicated step or in front of the app, using a certificate trusted by Apple devices.
 
 ## Deployment hardening
 
-Run behind an HTTPS reverse proxy (see [deployment.md](deployment.md)). The container is non-root, read-only, with all capabilities dropped and `no-new-privileges`.
+Run behind an HTTPS reverse proxy (see [Reverse proxy and HTTPS](reverse-proxy.md)). The container is non-root, read-only, with all capabilities dropped and `no-new-privileges`.
+
+## What it does not protect
+
+- It does not check that the servers it describes are reachable or correctly configured.
+- The Apple profile is unsigned, see above.
+- `/support` is one shared password over HTTP Basic: serve it over HTTPS only, and treat the password like any admin credential.
+- There are no published releases or images yet, so there is nothing to verify with a signature. Build from a tag or commit you have read.
 
 ## Reporting
 
-Report vulnerabilities privately to the repository maintainers rather than in a public issue.
+Do not open a public issue. Use GitHub private vulnerability reporting: <https://github.com/yetysw/mccs/security/advisories/new>. See [SECURITY.md](https://github.com/yetysw/mccs/blob/main/SECURITY.md).

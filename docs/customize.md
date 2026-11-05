@@ -1,12 +1,10 @@
-# Customization
+# Customise branding, guides and screenshots
+
+At the end the wizard carries your name, logo and colour, and your own guide wording.
 
 ## Branding
 
-Name, logo, accent colour and support contact are environment variables; see [configuration.md](configuration.md). The theme is light by default with automatic dark mode (`prefers-color-scheme`), a system font and a single accent colour.
-
-## Styles
-
-`public/css/app.css` defines design tokens on `:root`. The same file is used by the `/support` page. The accent is overridden by the generated `/brand.css`, so no inline style is ever needed and the CSP keeps `style-src 'self'`.
+Name, logo, accent colour and support contact are environment variables; see [Configuration](configuration.md). The theme follows the system (dark or light), uses the system font and a single accent colour. `public/css/app.css` defines the design tokens on `:root` and is also used by `/support`. The accent is set by the generated `/brand.css`, so no inline style is needed and the CSP keeps `style-src 'self'`.
 
 ## Guides
 
@@ -29,7 +27,7 @@ Mini syntax used in step texts:
 
 Copyable values (`f:` and `{F:}`) are defined by `fieldDefs()` in `public/js/app.js`.
 
-## Screenshots
+## Add a screenshot
 
 1. Add `shot: 'folder/file.png'` (and optionally `shotCaption`) to a step.
 2. Put the image in `public/img/guides/` (PNG recommended, 1200 to 1600 px wide, no real personal data).
@@ -37,6 +35,6 @@ Copyable values (`f:` and `{F:}`) are defined by `fieldDefs()` in `public/js/app
 
 The "Voir une capture" link appears only when the file exists; the list is built at startup. `public/img/guides/README.md` lists the expected files.
 
-## Translation
+## Translate
 
-The UI is in French. Translate the texts in `public/js/guides.js` and `public/index.html`, plus the labels in `public/js/app.js` and the `/support` page under `public/support/`.
+The UI is in French. Translate the texts in `public/js/guides.js` and `public/index.html`, plus the labels in `public/js/app.js` and the pages under `public/support/`.

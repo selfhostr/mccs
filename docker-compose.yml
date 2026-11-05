@@ -3,10 +3,10 @@
 # file (see .env.example), then run: docker compose up -d
 # Empty or unset values fall back to the neutral defaults built into server/config.js.
 services:
-  mail-setup:
+  mccs:
     build: .
-    image: ${IMAGE_NAME:-mail-setup}:latest
-    container_name: ${CONTAINER_NAME:-mail-setup}
+    image: ${IMAGE_NAME:-mccs}:latest
+    container_name: ${CONTAINER_NAME:-mccs}
     restart: unless-stopped
     ports:
       - "${HOST_PORT:-8080}:8080"

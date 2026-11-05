@@ -1,0 +1,8 @@
+[
+  {"label":"Get started","items":["install.md","first-run.md"]},
+  {"label":"Using it","items":["wizard.md","support-page.md","apple-and-autoconfig.md","customize.md"]},
+  {"label":"Reference","items":["configuration.md","endpoints.md","mdaemon.md"]},
+  {"label":"Security","items":["security.md"]},
+  {"label":"Operations","items":["reverse-proxy.md","upgrading.md","troubleshooting.md"]},
+  {"label":"Development","items":["development.md"]}
+]

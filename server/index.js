@@ -264,7 +264,7 @@ const server = http.createServer((req, res) => {
 
 server.keepAliveTimeout = 65000;
 server.listen(config.port, '0.0.0.0', () => {
-  console.log(`mail-setup à l'écoute sur :${config.port} (${files.size} fichiers statiques, ${GUIDE_SHOTS.length} captures, page /support ${SUPPORT_ENABLED ? 'active' : 'désactivée'})`);
+  console.log(`mccs à l'écoute sur :${config.port} (${files.size} fichiers statiques, ${GUIDE_SHOTS.length} captures, page /support ${SUPPORT_ENABLED ? 'active' : 'désactivée'})`);
 });
 
 function shutdown() {

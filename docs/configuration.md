@@ -2,9 +2,37 @@
 
 All settings are environment variables, read at startup. Empty or unset means the built-in default. With Docker, put them in `.env` (see `.env.example`) and run `docker compose up -d`; no rebuild needed.
 
+## All variables
+
+| Variable | Default | Description |
+|---|---|---|
+| `HOST_PORT` | `8080` | Published host port (compose only) |
+| `IMAGE_NAME` | `mccs` | Docker image name (compose only) |
+| `CONTAINER_NAME` | `mccs` | Container name (compose only) |
+| `PORT` | `8080` | Listening port of the Node process |
+| `BRAND_NAME` | `Mail Setup` | Name shown in the UI. This is the fallback shown to your users: set your own |
+| `BRAND_LOGO_URL` | empty | `/img/...` path or absolute https URL; empty = text name + neutral icon |
+| `BRAND_ACCENT` | `#2563eb` | Accent colour, `#rgb` or `#rrggbb` |
+| `MAIL_HOST` | `mail.example.com` | Default for IMAP, SMTP, webmail and DAV hosts |
+| `IMAP_HOST` / `IMAP_PORT` / `IMAP_SECURITY` | `MAIL_HOST` / `993` / `SSL/TLS` | Incoming server |
+| `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURITY` | `MAIL_HOST` / `465` / `SSL/TLS` | Outgoing server |
+| `WEBMAIL_URL` | `https://MAIL_HOST/` | Webmail link |
+| `DAV_PRESET` | `mdaemon` | `mdaemon` or `generic` |
+| `DAV_BASE_URL` | `https://MAIL_HOST` | Base of all DAV URLs |
+| `CALDAV_URL`, `CARDDAV_URL`, `TASKS_URL` | per preset | Generic server URLs shown before an address is typed |
+| `DAV_DISCOVERY_URL`, `DAV_CARD_DISCOVERY_URL` | `DAV_BASE_URL/.well-known/caldav` and `/carddav` | Discovery URLs (DAVx5, CalDAV Synchronizer) |
+| `DAV_PRINCIPAL_URL_TEMPLATE`, `DAV_CALENDAR_URL_TEMPLATE`, `DAV_TASKS_URL_TEMPLATE`, `DAV_CONTACTS_URL_TEMPLATE` | per preset | Personal URL templates (`{email}`, `{local}`, `{domain}`) |
+| `PUBLIC_URL` | `https://config.example.com` | Public address of this app (links, QR codes) |
+| `SUPPORT_PHONE`, `SUPPORT_EMAIL`, `SUPPORT_HOURS`, `SUPPORT_ADDRESS` | empty | Support contact; each hidden when empty |
+| `SUPPORT_USER` | `support` | Basic auth user for `/support` |
+| `SUPPORT_PASSWORD` | empty | Basic auth password; empty = `/support` returns 404 |
+| `PROFILE_ORGANIZATION` | `BRAND_NAME` | Organisation in the Apple profile |
+| `PROFILE_ID_PREFIX` | `com.example.mailsetup` | Profile identifier prefix: set your own reverse-domain prefix |
+| `CALDAVSYNC_URL`, `DAVX5_GITHUB_URL`, `DAVX5_FDROID_URL`, `DAVX5_PLAY_URL`, `THUNDERBIRD_URL` | official download pages | Download links used in guides |
+
 ## Docker
 
-`HOST_PORT` (8080), `IMAGE_NAME` and `CONTAINER_NAME` (both `mail-setup`). Inside the container the app listens on `PORT` (8080).
+`HOST_PORT` (8080), `IMAGE_NAME` and `CONTAINER_NAME` (both `mccs`). Inside the container the app listens on `PORT` (8080).
 
 ## Branding
 
