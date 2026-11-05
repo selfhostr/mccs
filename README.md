@@ -6,15 +6,11 @@
 
 <a href="https://www.yety.ch">Website</a> · <a href="docs/index.md">Documentation</a> · <a href="https://github.com/yetysw/mccs/releases">Releases</a>
 
-<br><br>
-
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-<br><br>
-
-<img src="docs/assets/screenshot.png" alt="mccs showing the Thunderbird guide: step 4 of 13 with copyable server settings" width="100%">
-
 </div>
+
+Screenshots: [screenshots/](screenshots/)
 
 ## Overview
 
