@@ -18,6 +18,8 @@
 
 ## Overview
 
+mccs stands for Mail, Calendar, Contacts Setup.
+
 mccs is a web page you host for the customers of your mail service. They type their address, pick Windows, macOS, iPhone, iPad or Android, and get a short guide with every value ready to copy.
 
 - **One step per screen.** Outlook, Thunderbird, Apple Mail, Gmail, Samsung apps, CalDAV Synchronizer and DAVx5, with the right server settings filled in.

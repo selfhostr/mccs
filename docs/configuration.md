@@ -10,7 +10,7 @@ All settings are environment variables, read at startup. Empty or unset means th
 | `IMAGE_NAME` | `mccs` | Docker image name (compose only) |
 | `CONTAINER_NAME` | `mccs` | Container name (compose only) |
 | `PORT` | `8080` | Listening port of the Node process |
-| `BRAND_NAME` | `Mail Setup` | Name shown in the UI. This is the fallback shown to your users: set your own |
+| `BRAND_NAME` | `mccs` | Name shown in the UI. This is the fallback shown to your users: set your own |
 | `BRAND_LOGO_URL` | empty | `/img/...` path or absolute https URL; empty = text name + neutral icon |
 | `BRAND_ACCENT` | `#004AAD` | Accent colour, `#rgb` or `#rrggbb` |
 | `MAIL_HOST` | `mail.example.com` | Default for IMAP, SMTP, webmail and DAV hosts |
