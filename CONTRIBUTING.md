@@ -33,7 +33,7 @@ There is no automated test suite or CI yet. Before you open a pull request, chec
 
 ## Branches and commits
 
-Branches are `feat/...`, `fix/...`, `docs/...` or `chore/...`, opened as a pull request against the default branch. Titles follow Conventional Commits (`fix(guides): correct the Outlook step 3`). Sign off your commits (`git commit -s`) to accept the Developer Certificate of Origin. UI pull requests include before and after screenshots.
+Branches are `feat/...`, `fix/...`, `docs/...` or `chore/...`, opened as a pull request against the default branch. Titles follow Conventional Commits (`fix(guides): correct the Outlook step 3`). Sign off your commits (`git commit -s`) to accept the Developer Certificate of Origin.
 
 ## Public repository hygiene
 
