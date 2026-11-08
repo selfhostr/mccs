@@ -14,7 +14,7 @@ Ten failed sign-ins from one address lock it for 15 minutes. Wait, or restart th
 
 ## The accent colour does not change
 
-`BRAND_ACCENT` must be `#rgb` or `#rrggbb`; anything else falls back to `#004AAD`.
+`BRAND_ACCENT` must be `#rgb` or `#rrggbb`; anything else falls back to the neutral accent.
 
 ## My logo does not appear
 

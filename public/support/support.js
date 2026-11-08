@@ -23,7 +23,7 @@ function normalizeEmail(raw) {
 const normalizeName = (s) => String(s || '').replace(/[\u0000-\u001f\u007f-\u009f]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 80);
 
 let cfg = {
-  brand: 'Mail Setup',
+  brand: 'mccs',
   brandLogoUrl: '',
   publicUrl: location.origin,
   support: { email: '', phone: '', hours: '', address: '' },
