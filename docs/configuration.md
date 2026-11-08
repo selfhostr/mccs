@@ -12,7 +12,7 @@ All settings are environment variables, read at startup. Empty or unset means th
 | `PORT` | `8080` | Listening port of the Node process |
 | `BRAND_NAME` | `mccs` | Name shown in the UI. This is the fallback shown to your users: set your own |
 | `BRAND_LOGO_URL` | empty | `/img/...` path or absolute https URL; empty = text name + neutral icon |
-| `BRAND_ACCENT` | `#004AAD` | Accent colour, `#rgb` or `#rrggbb` |
+| `BRAND_ACCENT` | neutral (#e5e5e5 dark, #404040 light) | Accent colour, `#rgb` or `#rrggbb` |
 | `MAIL_HOST` | `mail.example.com` | Default for IMAP, SMTP, webmail and DAV hosts |
 | `IMAP_HOST` / `IMAP_PORT` / `IMAP_SECURITY` | `MAIL_HOST` / `993` / `SSL/TLS` | Incoming server |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURITY` | `MAIL_HOST` / `465` / `SSL/TLS` | Outgoing server |
