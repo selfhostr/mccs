@@ -16,7 +16,7 @@ Open http://localhost:8080. Code or guide changes need `--build`; environment ch
 
 ## Checks
 
-There is no automated test suite or CI yet. Before you open a pull request, check by hand:
+CI syntax-checks the scripts and smoke-tests the Docker image; there is no other automated test suite. Before you open a pull request, check by hand:
 
 - the wizard from address to a guide, on a desktop and at 390 px wide, with no horizontal scroll;
 - dark and light, and keyboard only;
