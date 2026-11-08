@@ -4,7 +4,7 @@ At the end the wizard carries your name, logo and colour, and your own guide wor
 
 ## Branding
 
-Name, logo, accent colour and support contact are environment variables; see [Configuration](configuration.md). The theme follows the system (dark or light), uses the system font and a single accent colour. `public/css/app.css` defines the design tokens on `:root` and is also used by `/support`. The accent is set by the generated `/brand.css`, so no inline style is needed and the CSP keeps `style-src 'self'`.
+Name, logo, accent colour and support contact are environment variables; see [Configuration](configuration.md). The theme follows the system (dark or light), uses Inter (text) and JetBrains Mono (code and identifiers), both self-hosted, and a single accent colour. `public/css/app.css` defines the design tokens on `:root` and is also used by `/support`. The accent is set by the generated `/brand.css`, so no inline style is needed and the CSP keeps `style-src 'self'`.
 
 ## Guides
 
