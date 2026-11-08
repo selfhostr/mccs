@@ -45,4 +45,4 @@ Run behind an HTTPS reverse proxy (see [Reverse proxy and HTTPS](reverse-proxy.m
 
 ## Reporting
 
-Do not open a public issue. Use GitHub private vulnerability reporting: <https://github.com/yetysw/mccs/security/advisories/new>. See [SECURITY.md](https://github.com/yetysw/mccs/blob/main/SECURITY.md).
+Do not open a public issue. Use GitHub private vulnerability reporting: <https://github.com/selfhostr/mccs/security/advisories/new>. See [SECURITY.md](https://github.com/selfhostr/mccs/blob/main/SECURITY.md).

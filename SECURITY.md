@@ -16,7 +16,7 @@ There is no tagged release yet.
 
 **Do not open a public issue for a security problem.**
 
-Use GitHub private vulnerability reporting: the repository's **Security** tab, then **Report a vulnerability** (<https://github.com/yetysw/mccs/security/advisories/new>).
+Use GitHub private vulnerability reporting: the repository's **Security** tab, then **Report a vulnerability** (<https://github.com/selfhostr/mccs/security/advisories/new>).
 
 Include the affected component, steps to reproduce, the impact as you understand it, and the commit you tested.
 

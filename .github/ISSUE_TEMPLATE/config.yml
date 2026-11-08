@@ -1,8 +1,8 @@
 blank_issues_enabled: false
 contact_links:
   - name: Documentation
-    url: https://github.com/yetysw/mccs/blob/main/docs/index.md
+    url: https://github.com/selfhostr/mccs/blob/main/docs/index.md
     about: Install, configuration, endpoints, security.
   - name: Security issue
-    url: https://github.com/yetysw/mccs/security/advisories/new
+    url: https://github.com/selfhostr/mccs/security/advisories/new
     about: Report privately; never in a public issue.

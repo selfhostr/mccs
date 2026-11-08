@@ -6,7 +6,7 @@ body:
   - type: markdown
     attributes:
       value: |
-        Security problems go to https://github.com/yetysw/mccs/security/advisories/new, not here.
+        Security problems go to https://github.com/selfhostr/mccs/security/advisories/new, not here.
   - type: textarea
     id: what
     attributes:

@@ -41,4 +41,4 @@ At startup the server hashes CSS and JS and writes `?v=<hash>` into asset URLs, 
 
 ## Contribute
 
-See [CONTRIBUTING.md](https://github.com/yetysw/mccs/blob/main/CONTRIBUTING.md).
+See [CONTRIBUTING.md](https://github.com/selfhostr/mccs/blob/main/CONTRIBUTING.md).

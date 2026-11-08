@@ -5,7 +5,7 @@ At the end you have the wizard answering on port 8080. No image is published yet
 ## Docker Compose
 
 ```bash
-git clone https://github.com/yetysw/mccs.git && cd mccs
+git clone https://github.com/selfhostr/mccs.git && cd mccs
 cp .env.example .env
 ```
 

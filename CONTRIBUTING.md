@@ -7,7 +7,7 @@ Bug reports, guide fixes and presets for other mail servers are welcome. One top
 Everything runs in Docker, with no toolchain on your machine.
 
 ```bash
-git clone https://github.com/yetysw/mccs.git && cd mccs
+git clone https://github.com/selfhostr/mccs.git && cd mccs
 cp .env.example .env
 docker compose up -d --build
 ```

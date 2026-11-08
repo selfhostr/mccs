@@ -1,10 +1,10 @@
 <div align="center">
 
-<a href="https://www.yety.ch"><img src=".github/assets/banner.svg" alt="mccs: mail, calendar and contacts setup, step by step" width="100%"></a>
+<a href="https://mccs.selfhostr.io"><img src=".github/assets/banner.svg" alt="mccs: mail, calendar and contacts setup, step by step" width="100%"></a>
 
 <h3>A white-label wizard that walks your users through setting up mail, calendar and contacts on their own devices.</h3>
 
-<a href="https://www.yety.ch">Website</a> · <a href="docs/index.md">Documentation</a> · <a href="https://github.com/yetysw/mccs/releases">Releases</a>
+<a href="https://mccs.selfhostr.io">Website</a> · <a href="docs/index.md">Documentation</a> · <a href="https://github.com/selfhostr/mccs/releases">Releases</a>
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
@@ -27,7 +27,7 @@ Free, for good. MIT licence, no paid edition.
 No image is published yet, so Docker builds it from the repository:
 
 ```bash
-git clone https://github.com/yetysw/mccs.git && cd mccs
+git clone https://github.com/selfhostr/mccs.git && cd mccs
 cp .env.example .env      # set MAIL_HOST, PUBLIC_URL, BRAND_NAME
 docker compose up -d --build
 ```
@@ -80,4 +80,4 @@ MIT, see [LICENSE](LICENSE). mccs is provided "as is", without warranty of any k
 
 mccs is free. If it saves you time, you can support its development:
 
-[Sponsor us on GitHub](https://github.com/sponsors/yetysw), recurring or one-off.
+[Sponsor us on GitHub](https://github.com/sponsors/selfhostr), recurring or one-off.
