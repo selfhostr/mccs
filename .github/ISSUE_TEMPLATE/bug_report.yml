@@ -1,0 +1,50 @@
+name: Bug report
+description: Something does not work as described.
+title: "[bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Security problems go to https://github.com/selfhostr/mccs/security/advisories/new, not here.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you did, what you expected, what you got instead.
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Commit or tag you built.
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Wizard
+        - A guide (device and app in the description)
+        - Apple profile
+        - Thunderbird autoconfig
+        - Support page
+        - Configuration or preset
+        - Docker
+        - Documentation
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs
+      description: "`docker compose logs --tail=100 mccs`. Redact hostnames and addresses."
+      render: text
+  - type: textarea
+    id: env
+    attributes:
+      label: Environment
+      description: Browser, device, mail server type and `DAV_PRESET`.

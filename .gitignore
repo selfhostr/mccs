@@ -10,7 +10,7 @@ npm-debug.log*
 
 # Screenshots, scratch files, OS files
 *.png
-!docs/*.png
+!docs/**/*.png
 !public/img/**/*.png
 captures/
 scratch/
