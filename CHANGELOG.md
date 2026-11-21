@@ -8,6 +8,8 @@ All notable changes to mccs. The format follows [Keep a Changelog](https://keepa
 
 - Self-service setup wizard for mail (IMAP/SMTP), calendar (CalDAV) and contacts (CardDAV), with Apple profiles, autoconfig and a password-protected support page.
 - Community files (security policy, contributing guide, code of conduct), a CI workflow and Dependabot configuration.
+- Settings saved in `/data/config.json` (`mccs-data` volume) override the environment and apply without restart; `BRAND_BACKGROUND` for the page background; unit tests with `node --test`.
+- The guide lists every step on one page, with a "done" checkbox per step.
 
 ### Changed
 

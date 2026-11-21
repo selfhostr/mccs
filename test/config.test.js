@@ -98,3 +98,57 @@ test('l’objet config est le même avant et après rechargement', () => {
   assert.equal(config.imap.port, 143);
   assert.equal(imap.port, 143);
 });
+
+// --- Relecture finale ---
+
+test('un fichier illisible est mis de côté avant le premier enregistrement', () => {
+  const dir = tmp();
+  fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify({ version: 2, values: { BRAND_NAME: 'Futur' } }));
+  const { settings } = createSettings({ env: {}, dir });
+  assert.deepEqual(settings.save({ BRAND_NAME: 'Acme' }), { ok: true });
+  settings.save({ BRAND_NAME: 'Acme 2' });
+  const kept = fs.readdirSync(dir).filter((f) => f.startsWith('config.json.bad-'));
+  assert.equal(kept.length, 1);
+  assert.match(fs.readFileSync(path.join(dir, kept[0]), 'utf8'), /Futur/);
+});
+
+test('les clés inconnues du fichier sont conservées lors d’un enregistrement', () => {
+  const dir = tmp();
+  fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify({ version: 1, values: { FUTURE_KEY: 'x', BRAND_NAME: 'A' } }));
+  const { settings } = createSettings({ env: {}, dir });
+  settings.save({ BRAND_NAME: 'B' });
+  const data = JSON.parse(fs.readFileSync(path.join(dir, 'config.json'), 'utf8'));
+  assert.deepEqual(data.values, { FUTURE_KEY: 'x', BRAND_NAME: 'B' });
+});
+
+test('une erreur d’écriture renvoie ok:false sans exception ni fichier temporaire', () => {
+  const dir = tmp();
+  fs.mkdirSync(path.join(dir, 'config.json'));
+  const { settings } = createSettings({ env: {}, dir });
+  const r = settings.save({ BRAND_NAME: 'Acme' });
+  assert.equal(r.ok, false);
+  assert.ok(r.errors._);
+  assert.deepEqual(fs.readdirSync(dir).filter((f) => f.endsWith('.tmp')), []);
+});
+
+test('un patch qui n’est pas un objet simple est refusé sans rien écrire', () => {
+  const dir = tmp();
+  const { settings } = createSettings({ env: {}, dir });
+  for (const p of [null, [], 42, 'x']) assert.equal(settings.save(p).ok, false, JSON.stringify(p));
+  assert.equal(settings.save(JSON.parse('{"__proto__":"x"}')).ok, false);
+  assert.equal(fs.existsSync(path.join(dir, 'config.json')), false);
+});
+
+test('les clés réservées écrites à la main dans le fichier sont ignorées', () => {
+  const dir = tmp();
+  fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify({ version: 1, values: { SUPPORT_PASSWORD: 'pirate', PORT: '1' } }));
+  const { config } = createSettings({ env: { SUPPORT_PASSWORD: 'vrai' }, dir });
+  assert.equal(config.supportAuth.password, 'vrai');
+  assert.equal(config.port, 8080);
+});
+
+test('les espaces autour des valeurs du fichier sont retirés', () => {
+  const dir = tmp();
+  fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify({ version: 1, values: { MAIL_HOST: ' mail.sp.ch ' } }));
+  assert.equal(createSettings({ env: {}, dir }).config.imap.host, 'mail.sp.ch');
+});

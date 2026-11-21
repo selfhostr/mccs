@@ -167,7 +167,7 @@ function guardSupport(req, res) {
   }
   send(req, res, 401, 'Authentification requise.\n', Object.assign({
     'Content-Type': 'text/plain; charset=utf-8',
-    'WWW-Authenticate': 'Basic realm="Support ' + config.brand.replace(/["\\\r\n]/g, '') + '", charset="UTF-8"',
+    'WWW-Authenticate': 'Basic realm="Support ' + config.brand.replace(/[^\x20-\x7e]/g, '?').replace(/["\\]/g, '') + '", charset="UTF-8"',
   }, noindex));
   return false;
 }

@@ -34,7 +34,7 @@ Set `PUBLIC_URL` to the same address.
 
 ## Caching
 
-At startup a hash of all CSS and JS files (and `/brand.css`) is computed and injected as `?v=<hash>` into asset URLs in the HTML and into JS imports. Versioned assets are served as immutable for one year; HTML is `no-cache`. A restart with changed assets therefore invalidates browser caches automatically.
+At startup a hash of all CSS and JS files is computed and injected as `?v=<hash>` into asset URLs in the HTML and into JS imports. Versioned assets are served as immutable for one year; HTML is `no-cache`. A restart with changed assets therefore invalidates browser caches automatically. `/brand.css` follows the saved settings, so it is never versioned and always served `no-cache`: do not cache it longer in your proxy.
 
 ## Autoconfig for Thunderbird
 

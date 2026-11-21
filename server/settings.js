@@ -87,7 +87,8 @@ const CHECKS = {
 // Renvoie { clé: message } pour chaque valeur refusée ; {} si tout est valide.
 // Une chaîne vide est toujours acceptée : elle ramène le réglage à sa valeur par défaut.
 function validateValues(values) {
-  const errors = {};
+  // Objet sans prototype : une clé « __proto__ » devient une erreur comme une autre.
+  const errors = Object.create(null);
   for (const [key, raw] of Object.entries(values || {})) {
     if (ENV_ONLY.includes(key)) { errors[key] = 'Ce réglage se change uniquement dans le fichier .env.'; continue; }
     const field = BY_KEY.get(key);
@@ -99,7 +100,7 @@ function validateValues(values) {
     const msg = CHECKS[field.type](v);
     if (msg) errors[key] = msg;
   }
-  return errors;
+  return Object.fromEntries(Object.entries(errors));
 }
 
 module.exports = { FIELDS, ENV_ONLY, validateValues };

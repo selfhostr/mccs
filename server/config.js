@@ -175,14 +175,17 @@ function replaceInPlace(target, next) {
 function createSettings({ env, dir }) {
   const store = createStore(dir);
   const listeners = [];
-  let overrides = {};
+  let raw = {};        // contenu du fichier, y compris les clés inconnues de cette version
+  let overrides = {};  // réglages valides, appliqués à la configuration
   const config = {};
 
   function reload() {
     // Les clés inconnues ou invalides du fichier sont ignorées (fichier modifié à la main, ancienne version).
-    const raw = store.read();
+    raw = store.read();
     const bad = validateValues(raw);
-    overrides = Object.fromEntries(Object.entries(raw).filter(([k, v]) => !bad[k] && v.trim() !== ''));
+    const skipped = Object.keys(bad);
+    if (skipped.length) console.error(`Réglages ignorés dans config.json : ${skipped.join(', ')}.`);
+    overrides = Object.fromEntries(Object.entries(raw).filter(([k, v]) => !bad[k] && v !== ''));
     replaceInPlace(config, build(Object.assign({}, env, overrides)));
   }
   reload();
@@ -203,20 +206,34 @@ function createSettings({ env, dir }) {
     },
     // Valide puis enregistre un lot de modifications ; "" supprime la surcharge.
     save(patch) {
+      if (!patch || typeof patch !== 'object' || Array.isArray(patch) || Object.getPrototypeOf(patch) !== Object.prototype) {
+        return { ok: false, errors: { _: 'Requête invalide.' } };
+      }
       const errors = validateValues(patch);
       if (Object.keys(errors).length) return { ok: false, errors };
       if (!store.writable) return { ok: false, errors: { _: 'Les réglages ne peuvent pas être enregistrés : dossier de données en lecture seule.' } };
-      const next = Object.assign({}, overrides);
+      // Fusion sur le contenu brut du fichier : les clés d'une version plus récente sont conservées.
+      const next = Object.fromEntries(Object.entries(raw));
       for (const [k, v] of Object.entries(patch)) {
         if (v.trim() === '') delete next[k]; else next[k] = v.trim();
       }
-      store.write(next);
+      try {
+        store.write(next);
+      } catch (err) {
+        console.error('Enregistrement des réglages impossible :', err.message);
+        return { ok: false, errors: { _: 'Les réglages n’ont pas pu être enregistrés (' + (err.code || 'erreur d’écriture') + ').' } };
+      }
       reload();
       listeners.forEach((fn) => fn(config));
       return { ok: true };
     },
     restorePrevious() {
-      if (!store.restorePrevious()) return false;
+      try {
+        if (!store.restorePrevious()) return false;
+      } catch (err) {
+        console.error('Restauration des réglages impossible :', err.message);
+        return false;
+      }
       reload();
       listeners.forEach((fn) => fn(config));
       return true;

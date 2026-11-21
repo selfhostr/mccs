@@ -20,7 +20,7 @@ cp .env.example .env      # set MAIL_HOST, PUBLIC_URL, BRAND_NAME
 docker compose up -d --build
 ```
 
-Open http://localhost:8080 and try the wizard with an address on your domain. Nothing is stored on disk, so back up only your `.env`. For production, put it behind an HTTPS reverse proxy: see [docs/reverse-proxy.md](docs/reverse-proxy.md) and [docs/install.md](docs/install.md).
+Open http://localhost:8080 and try the wizard with an address on your domain. Settings changed later from the admin page are saved in the `mccs-data` volume: back up your `.env` and that volume. For production, put it behind an HTTPS reverse proxy: see [docs/reverse-proxy.md](docs/reverse-proxy.md) and [docs/install.md](docs/install.md).
 
 ## Features
 
@@ -35,7 +35,7 @@ Open http://localhost:8080 and try the wizard with an address on your domain. No
 
 ## Architecture
 
-One Node 22 process using only the built-in `http` module, with no npm dependency. The front end is plain HTML, CSS and JavaScript served from memory, and reads its settings from `/api/config`. Everything comes from environment variables, in a read-only container running as a non-root user. See [docs/](docs/index.md).
+One Node 22 process using only the built-in `http` module, with no npm dependency. The front end is plain HTML, CSS and JavaScript served from memory, and reads its settings from `/api/config`. Settings come from environment variables and from `/data/config.json` (a Docker volume), in a read-only container running as a non-root user. See [docs/](docs/index.md).
 
 ## Limits
 
@@ -44,7 +44,7 @@ One Node 22 process using only the built-in `http` module, with no npm dependenc
 - The guides describe third-party apps as they look today; a new app version can make a step out of date.
 - It does not check that your mail server answers, and the `generic` preset has had less use than `mdaemon`.
 - The `/support` lock-out keys on the `CF-Connecting-IP` header, so only expose the app behind a proxy that controls it.
-- Early: variable names and endpoints can still change before 1.0. No published image, no automated tests and no CI yet.
+- Early: variable names and endpoints can still change before 1.0. No published image yet.
 
 ## Contributing
 

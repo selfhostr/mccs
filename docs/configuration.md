@@ -2,7 +2,7 @@
 
 Settings come from three layers, the first one set wins:
 
-1. **Saved settings** in `/data/config.json`, written by the admin page (no restart needed).
+1. **Saved settings** in `/data/config.json`, written by the admin page (no restart needed). Editing the file by hand takes effect at the next restart; to reset everything, delete it and restart.
 2. **Environment variables**, read at startup. With Docker, put them in `.env` (see `.env.example`) and run `docker compose up -d`; no rebuild needed.
 3. **Built-in defaults.**
 
@@ -22,7 +22,7 @@ The compose file mounts the `mccs-data` volume on `/data`. Without a writable `/
 | `BRAND_NAME` | `mccs` | Name shown in the UI. This is the fallback shown to your users: set your own |
 | `BRAND_LOGO_URL` | empty | `/img/...` path or absolute https URL; empty = text name + neutral icon |
 | `BRAND_ACCENT` | ink blue (#8cbfe6 dark, #1f5f8b light) | Accent colour, `#rgb` or `#rrggbb` |
-| `BRAND_BACKGROUND` | empty | Page background: `#rrggbb`, a gradient `#rrggbb,#rrggbb`, or an uploaded image `/uploads/<file>` |
+| `BRAND_BACKGROUND` | empty | Page background: `#rrggbb` or a gradient `#rrggbb,#rrggbb`; uploaded images (`/uploads/<file>`) come with the admin page |
 | `MAIL_HOST` | `mail.example.com` | Default for IMAP, SMTP, webmail and DAV hosts |
 | `IMAP_HOST` / `IMAP_PORT` / `IMAP_SECURITY` | `MAIL_HOST` / `993` / `SSL/TLS` | Incoming server |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURITY` | `MAIL_HOST` / `465` / `SSL/TLS` | Outgoing server |

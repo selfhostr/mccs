@@ -8,6 +8,7 @@ const path = require('node:path');
 
 // Dossier de réglages temporaire, avant de charger le serveur (lu au chargement de config.js).
 process.env.DATA_DIR = fs.mkdtempSync(path.join(os.tmpdir(), 'mccs-server-'));
+process.env.SUPPORT_PASSWORD = 'test-password';
 const { server, settings } = require('../server/index');
 
 let base;
@@ -44,4 +45,11 @@ test('la CSP autorise l’origine d’un logo externe enregistré', async () => 
 test('le HTML référence /brand.css sans numéro de version', async () => {
   const html = await (await fetch(base + '/')).text();
   assert.match(html, /href="\/brand\.css"/);
+});
+
+test('un nom avec apostrophe typographique ne fait pas planter /support', async () => {
+  settings.save({ BRAND_NAME: 'L’Atelier' });
+  const r = await fetch(base + '/support/');
+  assert.equal(r.status, 401);
+  assert.match(r.headers.get('www-authenticate'), /^Basic realm="Support L.Atelier"/);
 });

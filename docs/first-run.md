@@ -12,4 +12,4 @@ Before you announce it to customers, set `PUBLIC_URL` to the address they will u
 
 ## Back up
 
-Nothing is stored by the application. Keep your `.env` (it holds `SUPPORT_PASSWORD`; it is never committed) and any logo or screenshots you added.
+Keep your `.env` (it holds `SUPPORT_PASSWORD`; it is never committed), the `mccs-data` volume (settings saved from the admin page) and any logo or screenshots you added.

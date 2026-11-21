@@ -9,7 +9,7 @@ Only `GET` and `HEAD` are accepted; anything else gets 405.
 | `/profile.mobileconfig?email=&name=&services=mail,calendar,contacts` | Unsigned Apple profile, no password; 400 on invalid email |
 | `/mail/config-v1.1.xml?emailaddress=` | Thunderbird autoconfig (also at `/.well-known/autoconfig/mail/`) |
 | `/api/config` | Public settings, read by the browser; nothing secret |
-| `/brand.css` | Generated accent colour |
+| `/brand.css` | Generated accent colour and page background, `no-cache` |
 | `/healthz` | Health check, answers `ok` |
 
 Static files are served from memory, with gzip for text. Assets requested with the current `?v=<hash>` are immutable for a year; HTML is `no-cache`. See [Reverse proxy and HTTPS](reverse-proxy.md#caching).
@@ -17,5 +17,5 @@ Static files are served from memory, with gzip for text. Assets requested with t
 ## Ports and paths
 
 - Port `8080` (`PORT`) inside the container, published as `HOST_PORT`.
-- Nothing is written to disk: no data directory, no volume.
+- The only thing written to disk is `/data/config.json` (settings saved from the admin page), in the `mccs-data` volume.
 - Application code is in `/app` (`server/` and `public/`) in the image.
