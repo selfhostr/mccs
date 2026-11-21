@@ -6,7 +6,15 @@
 
 ## `/support` answers 404
 
-`SUPPORT_PASSWORD` is empty. Set it and restart.
+`SUPPORT_PASSWORD` is empty and no password was saved in the admin. Set it and restart.
+
+## I forgot the admin password
+
+Delete `/data/admin.json` (`docker compose exec mccs rm /data/admin.json`): `SUPPORT_PASSWORD` works again at once.
+
+## Sign-in succeeds but the sign-in page comes back
+
+The browser dropped the session cookie because it is marked `Secure` while you use plain HTTP. Use HTTPS, or set `PUBLIC_URL` to the `http://` address you use.
 
 ## `/support` answers 429
 

@@ -22,6 +22,7 @@ const FIELDS = [
   { key: 'SMTP_PORT', group: 'servers', label: 'Port d’envoi', type: 'port' },
   { key: 'SMTP_SECURITY', group: 'servers', label: 'Sécurité d’envoi', type: 'security', options: SECURITY },
   { key: 'WEBMAIL_URL', group: 'servers', label: 'Adresse du webmail', type: 'url' },
+  { key: 'ALLOWED_DOMAINS', group: 'servers', label: 'Domaines acceptés', type: 'domains' },
   // Calendrier et contacts
   { key: 'DAV_PRESET', group: 'dav', label: 'Type de serveur', type: 'preset', options: PRESETS },
   { key: 'DAV_BASE_URL', group: 'dav', label: 'URL de base', type: 'url' },
@@ -81,6 +82,8 @@ const CHECKS = {
   logo: (v) => (LOGO_PATH_RE.test(v) || isHttpUrl(v) ? '' : 'Logo invalide : une image envoyée ou une adresse https://.'),
   email: (v) => (normalizeEmail(v) ? '' : 'Adresse e-mail invalide.'),
   phone: (v) => (/^[+\d][\d .()/-]{2,30}$/.test(v) ? '' : 'Numéro de téléphone invalide.'),
+  // Liste « a.ch, b.fr » ; vide = tous les domaines.
+  domains: (v) => (v.split(',').every((d) => isHost(d.trim())) ? '' : 'Liste invalide : des domaines séparés par des virgules (ex. example.com, example.org).'),
   'reverse-dns': (v) => (/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(v) ? '' : 'Format attendu : com.example.mailsetup.'),
 };
 
@@ -103,4 +106,4 @@ function validateValues(values) {
   return Object.fromEntries(Object.entries(errors));
 }
 
-module.exports = { FIELDS, ENV_ONLY, validateValues };
+module.exports = { FIELDS, ENV_ONLY, validateValues, isHost };

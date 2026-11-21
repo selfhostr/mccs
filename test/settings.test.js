@@ -63,3 +63,15 @@ test('chaque champ a une clé, un groupe, un libellé et un type', () => {
     assert.ok(!ENV_ONLY.includes(f.key), f.key);
   }
 });
+
+test('domaines acceptés : liste séparée par des virgules, vide = tous', () => {
+  assert.deepEqual(validateValues({ ALLOWED_DOMAINS: 'acme.ch' }), {});
+  assert.deepEqual(validateValues({ ALLOWED_DOMAINS: 'acme.ch, Acme.FR ,mail.acme.de' }), {});
+  assert.deepEqual(validateValues({ ALLOWED_DOMAINS: '' }), {});
+  for (const bad of ['acme', 'acme.ch,,acme.fr', 'acme.ch;acme.fr', '*.acme.ch', 'user@acme.ch', 'acme.ch,']) {
+    assert.ok(validateValues({ ALLOWED_DOMAINS: bad }).ALLOWED_DOMAINS, bad);
+  }
+  const f = FIELDS.find((x) => x.key === 'ALLOWED_DOMAINS');
+  assert.equal(f.group, 'servers');
+  assert.equal(f.type, 'domains');
+});

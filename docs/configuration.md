@@ -18,15 +18,16 @@ The compose file mounts the `mccs-data` volume on `/data`. Without a writable `/
 | `IMAGE_NAME` | `mccs` | Docker image name (compose only) |
 | `CONTAINER_NAME` | `mccs` | Container name (compose only) |
 | `PORT` | `8080` | Listening port of the Node process |
-| `DATA_DIR` | `/data` | Folder for saved settings (`config.json`) |
+| `DATA_DIR` | `/data` | Folder for saved settings (`config.json`), the admin password (`admin.json`) and uploads |
 | `BRAND_NAME` | `mccs` | Name shown in the UI. This is the fallback shown to your users: set your own |
 | `BRAND_LOGO_URL` | empty | `/img/...` path or absolute https URL; empty = text name + neutral icon |
 | `BRAND_ACCENT` | ink blue (#8cbfe6 dark, #1f5f8b light) | Accent colour, `#rgb` or `#rrggbb` |
-| `BRAND_BACKGROUND` | empty | Page background: `#rrggbb` or a gradient `#rrggbb,#rrggbb`; uploaded images (`/uploads/<file>`) come with the admin page |
+| `BRAND_BACKGROUND` | empty | Page background: `#rrggbb`, a gradient `#rrggbb,#rrggbb`, or an image uploaded from the admin (`/uploads/<file>`) |
 | `MAIL_HOST` | `mail.example.com` | Default for IMAP, SMTP, webmail and DAV hosts |
 | `IMAP_HOST` / `IMAP_PORT` / `IMAP_SECURITY` | `MAIL_HOST` / `993` / `SSL/TLS` | Incoming server |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURITY` | `MAIL_HOST` / `465` / `SSL/TLS` | Outgoing server |
 | `WEBMAIL_URL` | `https://MAIL_HOST/` | Webmail link |
+| `ALLOWED_DOMAINS` | empty | Email domains accepted by the connection test, comma-separated (`example.com, example.org`); empty = all |
 | `DAV_PRESET` | `mdaemon` | `mdaemon` or `generic` |
 | `DAV_BASE_URL` | `https://MAIL_HOST` | Base of all DAV URLs |
 | `CALDAV_URL`, `CARDDAV_URL`, `TASKS_URL` | per preset | Generic server URLs shown before an address is typed |
@@ -34,8 +35,8 @@ The compose file mounts the `mccs-data` volume on `/data`. Without a writable `/
 | `DAV_PRINCIPAL_URL_TEMPLATE`, `DAV_CALENDAR_URL_TEMPLATE`, `DAV_TASKS_URL_TEMPLATE`, `DAV_CONTACTS_URL_TEMPLATE` | per preset | Personal URL templates (`{email}`, `{local}`, `{domain}`) |
 | `PUBLIC_URL` | `https://config.example.com` | Public address of this app (links, QR codes) |
 | `SUPPORT_PHONE`, `SUPPORT_EMAIL`, `SUPPORT_HOURS`, `SUPPORT_ADDRESS` | empty | Support contact; each hidden when empty |
-| `SUPPORT_USER` | `support` | Basic auth user for `/support` |
-| `SUPPORT_PASSWORD` | empty | Basic auth password; empty = `/support` returns 404 |
+| `SUPPORT_USER` | `support` | Admin user for `/support` |
+| `SUPPORT_PASSWORD` | empty | Initial admin password; once changed in the admin, `/data/admin.json` wins. Empty and no `admin.json` = `/support` returns 404 |
 | `PROFILE_ORGANIZATION` | `BRAND_NAME` | Organisation in the Apple profile |
 | `PROFILE_ID_PREFIX` | `com.example.mailsetup` | Profile identifier prefix: set your own reverse-domain prefix |
 | `CALDAVSYNC_URL`, `DAVX5_GITHUB_URL`, `DAVX5_FDROID_URL`, `DAVX5_PLAY_URL`, `THUNDERBIRD_URL` | official download pages | Download links used in guides |
@@ -56,6 +57,8 @@ The compose file mounts the `mccs-data` volume on `/data`. Without a writable `/
 `MAIL_HOST` (default `mail.example.com`) is the default for `IMAP_HOST`, `SMTP_HOST`, `WEBMAIL_URL` (`https://MAIL_HOST/`) and `DAV_BASE_URL` (`https://MAIL_HOST`).
 Ports and security labels: `IMAP_PORT` 993, `IMAP_SECURITY` `SSL/TLS`, `SMTP_PORT` 465, `SMTP_SECURITY` `SSL/TLS`.
 
+`ALLOWED_DOMAINS` lists the email domains for which the customer connection test is allowed, separated by commas, for example `example.com, example.org`. Case and spaces do not matter. Empty accepts every domain.
+
 ## Calendar and contacts
 
 `DAV_PRESET` is `mdaemon` (default) or `generic` (every DAV URL falls back to `.well-known` discovery). Any URL can be overridden individually:
@@ -67,7 +70,7 @@ Ports and security labels: `IMAP_PORT` 993, `IMAP_SECURITY` `SSL/TLS`, `SMTP_POR
 ## App, support and profile
 
 - `PUBLIC_URL`: public address used in links and QR codes.
-- `SUPPORT_USER` (`support`) and `SUPPORT_PASSWORD`: Basic auth for `/support`. Empty password disables the page (404). Generate one with `openssl rand -base64 24`.
+- `SUPPORT_USER` (`support`) and `SUPPORT_PASSWORD`: sign-in for `/support`. The password can then be changed in the admin; it is stored hashed in `/data/admin.json`, and deleting that file brings `SUPPORT_PASSWORD` back. No password at all disables the page (404). Generate one with `openssl rand -base64 24`.
 - `PROFILE_ORGANIZATION` (defaults to `BRAND_NAME`) and `PROFILE_ID_PREFIX` (`com.example.mailsetup`).
 - Download links: `CALDAVSYNC_URL`, `DAVX5_GITHUB_URL`, `DAVX5_FDROID_URL`, `DAVX5_PLAY_URL`, `THUNDERBIRD_URL`.
 

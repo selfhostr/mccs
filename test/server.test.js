@@ -49,7 +49,7 @@ test('le HTML référence /brand.css sans numéro de version', async () => {
 
 test('un nom avec apostrophe typographique ne fait pas planter /support', async () => {
   settings.save({ BRAND_NAME: 'L’Atelier' });
-  const r = await fetch(base + '/support/');
-  assert.equal(r.status, 401);
-  assert.match(r.headers.get('www-authenticate'), /^Basic realm="Support L.Atelier"/);
+  const r = await fetch(base + '/support/', { redirect: 'manual' });
+  assert.equal(r.status, 302);
+  assert.equal(r.headers.get('location'), '/support/login.html');
 });

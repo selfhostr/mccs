@@ -9,6 +9,7 @@ const { config, settings, publicConfig, DATA_DIR } = require('./config');
 const { normalizeEmail, normalizeName } = require('./validate');
 const { buildProfile, parseServices } = require('./mobileconfig');
 const { buildAutoconfig } = require('./autoconfig');
+const { createAdmin } = require('./admin');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
@@ -120,58 +121,6 @@ function refresh() {
 refresh();
 settings.onChange(refresh);
 
-/* ---------- Page interne /support (HTTP Basic) ---------- */
-const SUPPORT_ENABLED = config.supportAuth.password !== '';
-const sha = (s) => crypto.createHash('sha256').update(String(s), 'utf8').digest();
-const SUPPORT_USER_H = sha(config.supportAuth.user);
-const SUPPORT_PASS_H = sha(config.supportAuth.password);
-const failures = new Map(); // ip -> { n, until }
-const MAX_FAILURES = 10;
-const LOCK_MS = 15 * 60 * 1000;
-
-function clientIp(req) {
-  return String(req.headers['cf-connecting-ip'] || req.socket.remoteAddress || '');
-}
-
-// Comparaison en temps constant (empreintes de même longueur, les deux toujours évaluées).
-function checkBasic(header) {
-  const m = /^Basic\s+([A-Za-z0-9+/=]+)\s*$/i.exec(header || '');
-  let user = '', pass = '';
-  if (m) {
-    const dec = Buffer.from(m[1], 'base64').toString('utf8');
-    const i = dec.indexOf(':');
-    if (i >= 0) { user = dec.slice(0, i); pass = dec.slice(i + 1); }
-  }
-  const okUser = crypto.timingSafeEqual(sha(user), SUPPORT_USER_H);
-  const okPass = crypto.timingSafeEqual(sha(pass), SUPPORT_PASS_H);
-  return Boolean(m) && okUser && okPass;
-}
-
-// Renvoie true si la requête peut continuer, sinon envoie la réponse (404, 401 ou 429).
-function guardSupport(req, res) {
-  const noindex = { 'X-Robots-Tag': 'noindex, nofollow', 'Cache-Control': 'no-store' };
-  if (!SUPPORT_ENABLED) { notFound(req, res, noindex); return false; }
-  const ip = clientIp(req);
-  const now = Date.now();
-  const f = failures.get(ip);
-  if (f && f.until > now && f.n >= MAX_FAILURES) {
-    send(req, res, 429, 'Trop de tentatives. Réessayez dans quelques minutes.\n', Object.assign({ 'Content-Type': 'text/plain; charset=utf-8', 'Retry-After': '900' }, noindex));
-    return false;
-  }
-  if (checkBasic(req.headers.authorization)) { failures.delete(ip); return true; }
-  if (req.headers.authorization) {
-    const cur = f && f.until > now ? f : { n: 0, until: now + LOCK_MS };
-    cur.n++;
-    failures.set(ip, cur);
-    if (failures.size > 5000) failures.clear();
-  }
-  send(req, res, 401, 'Authentification requise.\n', Object.assign({
-    'Content-Type': 'text/plain; charset=utf-8',
-    'WWW-Authenticate': 'Basic realm="Support ' + config.brand.replace(/[^\x20-\x7e]/g, '?').replace(/["\\]/g, '') + '", charset="UTF-8"',
-  }, noindex));
-  return false;
-}
-
 function notFound(req, res, extra = {}) {
   const nf = files.get('/404.html');
   return send(req, res, 404, nf ? nf.body : 'Page introuvable.\n', Object.assign({
@@ -194,7 +143,6 @@ function sendText(req, res, status, text) {
 
 function serveStatic(req, res, pathname, extra = {}) {
   if (pathname === '/') pathname = '/index.html';
-  if (pathname === '/support' || pathname === '/support/') pathname = '/support/index.html';
   const f = files.get(pathname);
   if (!f) return false;
   const versioned = new URL(req.url, 'http://localhost').searchParams.get('v') === BUILD;
@@ -245,6 +193,9 @@ function handleAutoconfig(req, res, q) {
   });
 }
 
+// Espace d'administration (/support, /support/api/*) et fichiers envoyés (/uploads/*).
+const admin = createAdmin({ config, settings, dataDir: DATA_DIR, send, serveStatic, notFound });
+
 const server = http.createServer((req, res) => {
   let url;
   try {
@@ -252,11 +203,13 @@ const server = http.createServer((req, res) => {
   } catch {
     return sendText(req, res, 400, 'Requête invalide.');
   }
-  if (req.method !== 'GET' && req.method !== 'HEAD') {
-    return send(req, res, 405, 'Méthode non autorisée.\n', { Allow: 'GET, HEAD', 'Content-Type': 'text/plain; charset=utf-8' });
-  }
   const p = url.pathname;
   try {
+    // POST et PUT ne sont acceptés que sur /support/api/* (vérifié dans admin.js).
+    if (admin.handle(req, res, url)) return;
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      return send(req, res, 405, 'Méthode non autorisée.\n', { Allow: 'GET, HEAD', 'Content-Type': 'text/plain; charset=utf-8' });
+    }
     if (p === '/healthz') return sendText(req, res, 200, 'ok');
     if (p === '/api/config') {
       return send(req, res, 200, configJson, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' });
@@ -264,11 +217,6 @@ const server = http.createServer((req, res) => {
     if (p === '/profile.mobileconfig') return handleProfile(req, res, url.searchParams);
     if (p === '/mail/config-v1.1.xml' || p === '/.well-known/autoconfig/mail/config-v1.1.xml') {
       return handleAutoconfig(req, res, url.searchParams);
-    }
-    if (p === '/support' || p.startsWith('/support/')) {
-      if (!guardSupport(req, res)) return;
-      if (serveStatic(req, res, p, { 'X-Robots-Tag': 'noindex, nofollow', 'Cache-Control': 'no-store' })) return;
-      return notFound(req, res, { 'X-Robots-Tag': 'noindex, nofollow' });
     }
     if (serveStatic(req, res, p)) return;
     return notFound(req, res);
@@ -283,7 +231,7 @@ server.keepAliveTimeout = 65000;
 module.exports = { server, settings };
 if (require.main === module) {
   server.listen(config.port, '0.0.0.0', () => {
-    console.log(`mccs à l'écoute sur :${config.port} (${files.size} fichiers statiques, ${GUIDE_SHOTS.length} captures, page /support ${SUPPORT_ENABLED ? 'active' : 'désactivée'}, réglages ${settings.writable ? 'dans ' + DATA_DIR : 'en lecture seule'})`);
+    console.log(`mccs à l'écoute sur :${config.port} (${files.size} fichiers statiques, ${GUIDE_SHOTS.length} captures, page /support ${admin.enabled() ? 'active' : 'désactivée'}, réglages ${settings.writable ? 'dans ' + DATA_DIR : 'en lecture seule'})`);
   });
 }
 

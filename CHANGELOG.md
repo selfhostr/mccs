@@ -10,9 +10,11 @@ All notable changes to mccs. The format follows [Keep a Changelog](https://keepa
 - Community files (security policy, contributing guide, code of conduct), a CI workflow and Dependabot configuration.
 - Settings saved in `/data/config.json` (`mccs-data` volume) override the environment and apply without restart; `BRAND_BACKGROUND` for the page background; unit tests with `node --test`.
 - The guide lists every step on one page, with a "done" checkbox per step.
+- Admin API under `/support/api/*`: session sign-in (cookie limited to `/support`), settings, logo and background upload (`/uploads/`), TLS test of the mail servers, admin password change (scrypt hash in `/data/admin.json`). `ALLOWED_DOMAINS` setting.
 
 ### Changed
 
+- `/support` uses a sign-in form and a session instead of HTTP Basic.
 - The project is now `mccs` (Mail, Calendar, Contacts Setup) and lives at `github.com/selfhostr/mccs`.
 - README and documentation follow the same layout as the other selfhostr projects.
 - Inter (text) and JetBrains Mono (code, identifiers, numbers), self-hosted under `public/fonts` with their SIL OFL 1.1 licences, replace the system font stacks. No third-party request is made for fonts.

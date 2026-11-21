@@ -25,6 +25,7 @@ services:
       SMTP_PORT: "${SMTP_PORT:-}"
       SMTP_SECURITY: "${SMTP_SECURITY:-}"
       WEBMAIL_URL: "${WEBMAIL_URL:-}"
+      ALLOWED_DOMAINS: "${ALLOWED_DOMAINS:-}"
       # Calendar / contacts (DAV_PRESET: mdaemon | generic)
       DAV_PRESET: "${DAV_PRESET:-}"
       DAV_BASE_URL: "${DAV_BASE_URL:-}"
@@ -44,7 +45,7 @@ services:
       SUPPORT_EMAIL: "${SUPPORT_EMAIL:-}"
       SUPPORT_HOURS: "${SUPPORT_HOURS:-}"
       SUPPORT_ADDRESS: "${SUPPORT_ADDRESS:-}"
-      # Internal /support page (empty password = page disabled)
+      # Admin area /support (initial password; empty and no /data/admin.json = disabled)
       SUPPORT_USER: "${SUPPORT_USER:-}"
       SUPPORT_PASSWORD: "${SUPPORT_PASSWORD:-}"
       # Apple configuration profile

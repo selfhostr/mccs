@@ -152,3 +152,13 @@ test('les espaces autour des valeurs du fichier sont retirés', () => {
   fs.writeFileSync(path.join(dir, 'config.json'), JSON.stringify({ version: 1, values: { MAIL_HOST: ' mail.sp.ch ' } }));
   assert.equal(createSettings({ env: {}, dir }).config.imap.host, 'mail.sp.ch');
 });
+
+test('ALLOWED_DOMAINS donne config.allowedDomains (minuscules, sans espaces ; vide = [])', () => {
+  const { config, settings } = createSettings({ env: { ALLOWED_DOMAINS: 'Acme.ch' }, dir: tmp() });
+  assert.deepEqual(config.allowedDomains, ['acme.ch']);
+  settings.save({ ALLOWED_DOMAINS: 'acme.ch, Acme.FR' });
+  assert.deepEqual(config.allowedDomains, ['acme.ch', 'acme.fr']);
+  assert.equal(settings.describe().find((f) => f.key === 'ALLOWED_DOMAINS').effective, 'acme.ch, acme.fr');
+  const empty = createSettings({ env: {}, dir: tmp() });
+  assert.deepEqual(empty.config.allowedDomains, []);
+});

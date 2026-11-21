@@ -117,6 +117,8 @@ function build(src) {
       contacts: env('DAV_CONTACTS_URL_TEMPLATE', P.contacts),
     },
     webmailUrl: env('WEBMAIL_URL', 'https://' + MAIL_HOST + '/'),
+    // Domaines e-mail acceptés par le test de connexion (vide = tous).
+    allowedDomains: env('ALLOWED_DOMAINS', '').split(',').map((d) => d.trim().toLowerCase()).filter(Boolean),
     // Adresse publique du configurateur (liens et QR codes envoyés aux clients).
     publicUrl: httpUrl(env('PUBLIC_URL', 'https://config.example.com')),
     // Page interne /support (désactivée si SUPPORT_PASSWORD est vide).
@@ -151,7 +153,7 @@ const EFFECTIVE = {
   BRAND_BACKGROUND: (c) => c.brandBackground, MAIL_HOST: (c) => c.mailHost,
   IMAP_HOST: (c) => c.imap.host, IMAP_PORT: (c) => String(c.imap.port), IMAP_SECURITY: (c) => c.imap.security,
   SMTP_HOST: (c) => c.smtp.host, SMTP_PORT: (c) => String(c.smtp.port), SMTP_SECURITY: (c) => c.smtp.security,
-  WEBMAIL_URL: (c) => c.webmailUrl, DAV_PRESET: (c) => c.davPreset, DAV_BASE_URL: (c) => c.davBaseUrl,
+  WEBMAIL_URL: (c) => c.webmailUrl, ALLOWED_DOMAINS: (c) => c.allowedDomains.join(', '), DAV_PRESET: (c) => c.davPreset, DAV_BASE_URL: (c) => c.davBaseUrl,
   CALDAV_URL: (c) => c.caldavUrl, CARDDAV_URL: (c) => c.carddavUrl, TASKS_URL: (c) => c.tasksUrl,
   DAV_DISCOVERY_URL: (c) => c.davDiscoveryUrl, DAV_CARD_DISCOVERY_URL: (c) => c.davCardDiscoveryUrl,
   DAV_PRINCIPAL_URL_TEMPLATE: (c) => c.davTemplates.principal, DAV_CALENDAR_URL_TEMPLATE: (c) => c.davTemplates.calendar,
