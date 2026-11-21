@@ -15,6 +15,7 @@ services:
       BRAND_NAME: "${BRAND_NAME:-}"
       BRAND_LOGO_URL: "${BRAND_LOGO_URL:-}"
       BRAND_ACCENT: "${BRAND_ACCENT:-}"
+      BRAND_BACKGROUND: "${BRAND_BACKGROUND:-}"
       # Mail servers (MAIL_HOST is the default for every host below)
       MAIL_HOST: "${MAIL_HOST:-}"
       IMAP_HOST: "${IMAP_HOST:-}"
@@ -49,6 +50,9 @@ services:
       # Apple configuration profile
       PROFILE_ORGANIZATION: "${PROFILE_ORGANIZATION:-}"
       PROFILE_ID_PREFIX: "${PROFILE_ID_PREFIX:-}"
+    # Réglages enregistrés depuis l'admin (/data/config.json) : seul dossier modifiable.
+    volumes:
+      - mccs-data:/data
     read_only: true
     security_opt:
       - no-new-privileges:true
@@ -65,3 +69,6 @@ services:
       options:
         max-size: "5m"
         max-file: "2"
+
+volumes:
+  mccs-data:

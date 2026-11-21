@@ -7,7 +7,14 @@ git pull
 docker compose up -d --build
 ```
 
-Your settings live in `.env`, which is not touched. Nothing is stored by the application, so there is no data to migrate.
+Your settings live in `.env` and in the `mccs-data` volume (settings saved from the admin page, `config.json`). Neither is touched by an upgrade. Back up both:
+
+```bash
+cp .env .env.bak
+docker run --rm -v mccs_mccs-data:/data -v "$PWD":/backup alpine tar czf /backup/mccs-data.tgz -C /data .
+```
+
+The volume name is prefixed by the compose project name (`mccs_` by default); `docker volume ls` shows it.
 
 Before 1.0, variable names and endpoints can still change between versions. Read the release notes on the [releases page](https://github.com/selfhostr/mccs/releases) before upgrading.
 

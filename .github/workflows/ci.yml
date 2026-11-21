@@ -21,13 +21,15 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      # There is no test suite and no dependency: parse every script, build the image,
+      # No dependency: parse every script, run the built-in test runner, build the image,
       # then check that the container starts and answers its health endpoint.
       - name: Syntax check
         run: |
           for f in server/*.js public/js/*.js public/support/*.js; do
             node --check "$f"
           done
+      - name: Unit tests
+        run: node --test
       - name: Build image
         run: docker build -t mccs:ci .
       - name: Smoke test

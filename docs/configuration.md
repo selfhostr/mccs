@@ -1,6 +1,14 @@
 # Configuration
 
-All settings are environment variables, read at startup. Empty or unset means the built-in default. With Docker, put them in `.env` (see `.env.example`) and run `docker compose up -d`; no rebuild needed.
+Settings come from three layers, the first one set wins:
+
+1. **Saved settings** in `/data/config.json`, written by the admin page (no restart needed).
+2. **Environment variables**, read at startup. With Docker, put them in `.env` (see `.env.example`) and run `docker compose up -d`; no rebuild needed.
+3. **Built-in defaults.**
+
+`config.json` only holds the values changed in the admin, keyed by variable name. Values derived from another one (hosts from `MAIL_HOST`, DAV URLs from `DAV_BASE_URL` and `DAV_PRESET`) keep following it until they are changed themselves. The previous version is kept in `config.prev.json`. `PORT`, `SUPPORT_USER`, `SUPPORT_PASSWORD` and `DATA_DIR` can only be set in the environment.
+
+The compose file mounts the `mccs-data` volume on `/data`. Without a writable `/data`, the app runs as before from the environment and saving is refused.
 
 ## All variables
 
@@ -10,9 +18,11 @@ All settings are environment variables, read at startup. Empty or unset means th
 | `IMAGE_NAME` | `mccs` | Docker image name (compose only) |
 | `CONTAINER_NAME` | `mccs` | Container name (compose only) |
 | `PORT` | `8080` | Listening port of the Node process |
+| `DATA_DIR` | `/data` | Folder for saved settings (`config.json`) |
 | `BRAND_NAME` | `mccs` | Name shown in the UI. This is the fallback shown to your users: set your own |
 | `BRAND_LOGO_URL` | empty | `/img/...` path or absolute https URL; empty = text name + neutral icon |
 | `BRAND_ACCENT` | ink blue (#8cbfe6 dark, #1f5f8b light) | Accent colour, `#rgb` or `#rrggbb` |
+| `BRAND_BACKGROUND` | empty | Page background: `#rrggbb`, a gradient `#rrggbb,#rrggbb`, or an uploaded image `/uploads/<file>` |
 | `MAIL_HOST` | `mail.example.com` | Default for IMAP, SMTP, webmail and DAV hosts |
 | `IMAP_HOST` / `IMAP_PORT` / `IMAP_SECURITY` | `MAIL_HOST` / `993` / `SSL/TLS` | Incoming server |
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURITY` | `MAIL_HOST` / `465` / `SSL/TLS` | Outgoing server |

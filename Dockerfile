@@ -1,12 +1,16 @@
 FROM node:25-alpine
 
 ENV NODE_ENV=production \
-    PORT=8080
+    PORT=8080 \
+    DATA_DIR=/data
 
 WORKDIR /app
 COPY --chown=node:node package.json ./
 COPY --chown=node:node server ./server
 COPY --chown=node:node public ./public
+
+# Réglages modifiés dans l'admin (volume monté sur /data).
+RUN mkdir -p /data && chown node:node /data
 
 USER node
 EXPOSE 8080
