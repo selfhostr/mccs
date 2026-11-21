@@ -5,7 +5,7 @@ const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 const crypto = require('crypto');
-const { config, publicConfig } = require('./config');
+const { config, settings, publicConfig, DATA_DIR } = require('./config');
 const { normalizeEmail, normalizeName } = require('./validate');
 const { buildProfile, parseServices } = require('./mobileconfig');
 const { buildAutoconfig } = require('./autoconfig');
@@ -28,24 +28,25 @@ const TYPES = {
   '.webmanifest': 'application/manifest+json',
 };
 
-// Logo externe (BRAND_LOGO_URL absolue) : seule son origine est ajoutée à img-src.
-const LOGO_ORIGIN = /^https?:\/\//.test(config.brandLogoUrl) ? ' ' + new URL(config.brandLogoUrl).origin : '';
-
-const CSP = [
-  "default-src 'none'",
-  "script-src 'self'",
-  "style-src 'self'",
-  "img-src 'self' data:" + LOGO_ORIGIN,
-  "font-src 'self'",
-  "connect-src 'self'",
-  "manifest-src 'self'",
-  "base-uri 'none'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-].join('; ');
+// CSP : recalculée à chaque changement de réglages (logo externe : seule son origine est ajoutée à img-src).
+function buildCsp() {
+  const logoOrigin = /^https?:\/\//.test(config.brandLogoUrl) ? ' ' + new URL(config.brandLogoUrl).origin : '';
+  return [
+    "default-src 'none'",
+    "script-src 'self'",
+    "style-src 'self'",
+    "img-src 'self' data:" + logoOrigin,
+    "font-src 'self'",
+    "connect-src 'self'",
+    "manifest-src 'self'",
+    "base-uri 'none'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+  ].join('; ');
+}
 
 const SECURITY_HEADERS = {
-  'Content-Security-Policy': CSP,
+  'Content-Security-Policy': '',
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
   'Referrer-Policy': 'no-referrer',
@@ -70,14 +71,6 @@ const files = new Map();
   }
 })(PUBLIC_DIR, '');
 
-// Feuille générée : couleur d'accent (BRAND_ACCENT). Fichier séparé plutôt qu'un style inline,
-// pour respecter la CSP (style-src 'self'). Incluse dans le hash de cache-busting ci-dessous.
-{
-  // Sans BRAND_ACCENT : accent par défaut défini par app.css (bleu #8cbfe6 sombre, #1f5f8b clair).
-  const body = Buffer.from(config.brandAccent ? `:root { --accent: ${config.brandAccent}; --accent-on: #ffffff; }\n` : ':root {}\n');
-  files.set('/brand.css', { body, gz: zlib.gzipSync(body, { level: 9 }), type: TYPES['.css'], ext: '.css' });
-}
-
 // Cache-busting : un hash du contenu de tous les CSS/JS est injecté (?v=…) dans les URL des assets
 // du HTML et dans les imports des modules JS. Les URL versionnées sont servies en immutable.
 const BUILD = (() => {
@@ -89,7 +82,8 @@ const withV = (u) => u + '?v=' + BUILD;
 for (const [u, f] of files) {
   let txt;
   if (f.ext === '.html') {
-    txt = f.body.toString('utf8').replace(/((?:href|src)=")(\/[^"?#]+\.(?:css|js))(")/g, (m, a, b, c) => a + withV(b) + c);
+    // /brand.css change avec les réglages : jamais versionné (servi en no-cache).
+    txt = f.body.toString('utf8').replace(/((?:href|src)=")(\/[^"?#]+\.(?:css|js))(")/g, (m, a, b, c) => (b === '/brand.css' ? m : a + withV(b) + c));
   } else if (f.ext === '.js') {
     txt = f.body.toString('utf8').replace(/(\bfrom\s*')([^'?]+\.js)(')/g, (m, a, b, c) => a + withV(b) + c);
   } else continue;
@@ -103,7 +97,28 @@ const GUIDE_SHOTS = [...files.keys()]
   .filter((u) => u.startsWith('/img/guides/') && /\.(png|jpe?g|webp)$/i.test(u))
   .map((u) => u.slice('/img/guides/'.length))
   .sort();
-const configJson = Buffer.from(JSON.stringify(Object.assign(publicConfig(), { shots: GUIDE_SHOTS })));
+// Feuille de marque générée (accent, fond de page) : fichier séparé plutôt qu'un style inline,
+// pour respecter la CSP (style-src 'self').
+function brandCss() {
+  const rules = [];
+  if (config.brandAccent) rules.push(`--accent: ${config.brandAccent};`, '--accent-on: #ffffff;');
+  const bg = config.brandBackground;
+  if (/^#[0-9a-f]+,#[0-9a-f]+$/i.test(bg)) { const [a, b] = bg.split(','); rules.push(`--brand-bg: linear-gradient(160deg, ${a}, ${b});`); }
+  else if (bg.startsWith('#')) rules.push(`--brand-bg: ${bg};`);
+  else if (bg.startsWith('/uploads/')) rules.push(`--brand-bg: center / cover no-repeat url("${bg}"), var(--bg);`);
+  return `:root { ${rules.join(' ')} }\n`;
+}
+
+// Tout ce qui dépend des réglages, recalculé au démarrage et après chaque enregistrement.
+let configJson;
+function refresh() {
+  SECURITY_HEADERS['Content-Security-Policy'] = buildCsp();
+  configJson = Buffer.from(JSON.stringify(Object.assign(publicConfig(), { shots: GUIDE_SHOTS })));
+  const body = Buffer.from(brandCss());
+  files.set('/brand.css', { body, gz: zlib.gzipSync(body, { level: 9 }), type: TYPES['.css'], ext: '.css', live: true });
+}
+refresh();
+settings.onChange(refresh);
 
 /* ---------- Page interne /support (HTTP Basic) ---------- */
 const SUPPORT_ENABLED = config.supportAuth.password !== '';
@@ -185,7 +200,7 @@ function serveStatic(req, res, pathname, extra = {}) {
   const versioned = new URL(req.url, 'http://localhost').searchParams.get('v') === BUILD;
   const headers = Object.assign({
     'Content-Type': f.type,
-    'Cache-Control': f.ext === '.html' ? 'no-cache' : versioned ? 'public, max-age=31536000, immutable' : 'public, max-age=86400',
+    'Cache-Control': f.ext === '.html' || f.live ? 'no-cache' : versioned ? 'public, max-age=31536000, immutable' : 'public, max-age=86400',
     Vary: 'Accept-Encoding',
   }, extra);
   let body = f.body;
@@ -264,13 +279,19 @@ const server = http.createServer((req, res) => {
 });
 
 server.keepAliveTimeout = 65000;
-server.listen(config.port, '0.0.0.0', () => {
-  console.log(`mccs à l'écoute sur :${config.port} (${files.size} fichiers statiques, ${GUIDE_SHOTS.length} captures, page /support ${SUPPORT_ENABLED ? 'active' : 'désactivée'})`);
-});
+// Importé (tests, outils) : pas d'écoute automatique.
+module.exports = { server, settings };
+if (require.main === module) {
+  server.listen(config.port, '0.0.0.0', () => {
+    console.log(`mccs à l'écoute sur :${config.port} (${files.size} fichiers statiques, ${GUIDE_SHOTS.length} captures, page /support ${SUPPORT_ENABLED ? 'active' : 'désactivée'}, réglages ${settings.writable ? 'dans ' + DATA_DIR : 'en lecture seule'})`);
+  });
+}
 
 function shutdown() {
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 3000).unref();
 }
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+if (require.main === module) {
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
+}

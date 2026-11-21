@@ -66,7 +66,7 @@
   --shadow: 0 1px 0 rgb(255 255 255 / .02) inset, 0 1px 2px rgb(0 0 0 / .5);
   --shadow-pop: 0 2px 8px rgb(0 0 0 / .5), 0 24px 48px -16px rgb(0 0 0 / .8);
   --header-bg: rgb(15 20 27 / .9);
-  --page-bg: var(--bg);
+  --page-bg: var(--brand-bg, var(--bg));   /* --brand-bg : BRAND_BACKGROUND via /brand.css */
   --overlay: rgb(0 0 0 / .65);
   --qr-bg: #ffffff;               /* un QR code et une capture restent sur fond blanc */
 
@@ -107,13 +107,12 @@
     --shadow: 0 1px 2px rgba(16, 24, 40, .06);
     --shadow-pop: 0 12px 32px rgba(16, 24, 40, .18);
     --header-bg: rgba(255, 255, 255, .86);
-    --page-bg: var(--bg);
     --overlay: rgba(16, 24, 40, .5);
   }
 }
 
 *, *::before, *::after { box-sizing: border-box; }
-html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: 84px; background: var(--bg); }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; scroll-padding-top: 84px; min-height: 100%; background: var(--page-bg); }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } *, *::before, *::after { transition: none !important; animation: none !important; } }
 body {
   margin: 0;
@@ -121,8 +120,7 @@ body {
   font-size: 16px;
   line-height: 1.55;
   color: var(--text);
-  background: var(--page-bg);
-  background-attachment: fixed;
+  background: transparent;
   -webkit-font-smoothing: antialiased;
   overflow-x: hidden;
   position: relative;
