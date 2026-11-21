@@ -44,20 +44,17 @@
       <div class="container narrow">
         <form class="card start-card" id="start-form" novalidate autocomplete="on">
           <h1 id="home-title" tabindex="-1">Configurons votre messagerie</h1>
-          <p class="card-sub">Indiquez votre adresse e-mail. Nous vous guidons ensuite pas à pas.</p>
+          <p class="card-sub">Indiquez votre nom et votre adresse e-mail. Nous vous guidons ensuite pas à pas.</p>
+          <div class="field">
+            <label for="name">Prénom et nom <span class="optional">(facultatif)</span></label>
+            <input id="name" name="name" type="text" autocomplete="name" maxlength="80" placeholder="Jean Dupont" aria-describedby="name-help">
+            <p class="field-help" id="name-help">Le nom que vos destinataires verront.</p>
+          </div>
           <div class="field">
             <label for="email">Votre adresse e-mail</label>
             <input id="email" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="prenom.nom@example.com" required aria-describedby="email-error">
             <p class="field-error" id="email-error" role="alert" hidden></p>
           </div>
-          <details class="name-opt" id="name-opt">
-            <summary>Ajouter votre nom <span class="optional">(facultatif)</span></summary>
-            <div class="field">
-              <label for="name">Nom affiché</label>
-              <input id="name" name="name" type="text" autocomplete="name" maxlength="80" placeholder="Prénom Nom" aria-describedby="name-help">
-              <p class="field-help" id="name-help">Le nom que vos destinataires verront.</p>
-            </div>
-          </details>
           <button class="btn btn-primary btn-block" type="submit">
             Continuer
             <svg aria-hidden="true" viewBox="0 0 24 24" width="18" height="18"><path d="M5 12h14M13 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>

@@ -263,7 +263,7 @@ function renderHome() {
   $('#view-wizard').hidden = true;
   $('#view-home').hidden = false;
   if (state.email) $('#email').value = state.email;
-  if (state.name) { $('#name').value = state.name; $('#name-opt').open = true; }
+  if (state.name) $('#name').value = state.name;
   document.title = 'Configurer ma messagerie · ' + state.cfg.brand;
 }
 
@@ -395,7 +395,6 @@ function renderGuide(deviceId, guideId, stepParam) {
       <div class="gstep-head">
         <span class="gstep-num" aria-hidden="true">${n}</span>
         <h3 class="sr-only">Étape ${n} sur ${total}</h3>
-        <label class="gdone-label"><input type="checkbox" class="gdone" data-step="${n}" aria-label="Étape ${n} faite"><span aria-hidden="true">Fait</span></label>
       </div>
       <div class="gstep-body">
         <p class="gtext">${fmt(st.t)}</p>
@@ -407,6 +406,7 @@ function renderGuide(deviceId, guideId, stepParam) {
         ${st.sub ? `<p class="sub">${fmt(st.sub)}</p>` : ''}
         ${renderShot(st, g, n)}
       </div>
+      <label class="gdone-label"><input type="checkbox" class="gdone" data-step="${n}" aria-label="Étape ${n} faite"><span aria-hidden="true">Fait</span></label>
     </li>`;
   const sectionsHtml = groups.map(({ section, items }) => {
     const icon = SERVICE_META[section.service] ? ICONS[SERVICE_META[section.service].icon] : ICONS.gear;
