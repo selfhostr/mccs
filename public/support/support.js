@@ -1,4 +1,5 @@
-// Générateur de liens pour le support (page interne, protégée par HTTP Basic côté serveur).
+// Vue « Liens clients » de l'espace d'administration : lien pré-rempli, QR code, e-mail et SMS.
+// Importé par admin.js (la page /support exige une session côté serveur).
 import { DEVICES, APPS, GUIDES } from '/js/guides.js';
 import { encode, toSvg, toCanvas } from '/js/qr.js';
 
@@ -32,7 +33,7 @@ let current = null; // { link, email, name, device, app, qr }
 let generated = false;
 
 let toastTimer;
-function toast(msg) {
+export function toast(msg) {
   const t = $('#toast');
   t.textContent = msg;
   t.classList.add('show');
@@ -74,7 +75,7 @@ function applyBrand() {
   const logo = cfg.brandLogoUrl;
   document.querySelectorAll('.js-brand-logo').forEach((img) => { if (logo) { img.src = logo; img.alt = cfg.brand; } img.hidden = !logo; });
   document.querySelectorAll('.js-brand-mark, .brand > .js-brand-name').forEach((e) => { e.hidden = !!logo; });
-  document.title = 'Générateur de liens · Support ' + cfg.brand;
+  document.title = 'Administration · ' + cfg.brand;
 }
 
 function mailBody({ link, email, name, device, app }) {
@@ -168,7 +169,15 @@ async function copyText(text) {
   return ok;
 }
 
-function init() {
+// Recharge la configuration publique (nom, logo, adresse publique) après un enregistrement.
+export function reloadConfig() {
+  return fetch('/api/config', { headers: { Accept: 'application/json' }, cache: 'no-store' })
+    .then((r) => (r.ok ? r.json() : null))
+    .then((c) => { if (c) { cfg = Object.assign(cfg, c); applyBrand(); if (generated) render(); } })
+    .catch(() => {});
+}
+
+export function initLinks() {
   const devSel = $('#s-device');
   for (const d of DEVICES) {
     const o = document.createElement('option');
@@ -207,10 +216,5 @@ function init() {
     canvas.toBlob((b) => { if (b) download(b, fileBase() + '.png'); else toast('Export PNG impossible.'); }, 'image/png');
   });
 
-  fetch('/api/config', { headers: { Accept: 'application/json' } })
-    .then((r) => (r.ok ? r.json() : null))
-    .then((c) => { if (c) { cfg = Object.assign(cfg, c); applyBrand(); if (generated) render(); } })
-    .catch(() => {});
+  return reloadConfig();
 }
-
-init();
