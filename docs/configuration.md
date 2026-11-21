@@ -6,7 +6,7 @@ Settings come from three layers, the first one set wins:
 2. **Environment variables**, read at startup. With Docker, put them in `.env` (see `.env.example`) and run `docker compose up -d`; no rebuild needed.
 3. **Built-in defaults.**
 
-`config.json` only holds the values changed in the admin, keyed by variable name. Values derived from another one (hosts from `MAIL_HOST`, DAV URLs from `DAV_BASE_URL` and `DAV_PRESET`) keep following it until they are changed themselves. The previous version is kept in `config.prev.json`. `PORT`, `SUPPORT_USER`, `SUPPORT_PASSWORD` and `DATA_DIR` can only be set in the environment.
+`config.json` only holds the values changed in the admin, keyed by variable name. Values derived from another one (hosts from `MAIL_HOST`, DAV URLs from `DAV_BASE_URL` and `DAV_PRESET`) keep following it until they are changed themselves. The previous version is kept in `config.prev.json`. `PORT`, `SUPPORT_USER`, `SUPPORT_PASSWORD`, `DATA_DIR` and `TRUSTED_PROXY_HEADER` can only be set in the environment.
 
 The compose file mounts the `mccs-data` volume on `/data`. Without a writable `/data`, the app runs as before from the environment and saving is refused.
 
@@ -19,6 +19,7 @@ The compose file mounts the `mccs-data` volume on `/data`. Without a writable `/
 | `CONTAINER_NAME` | `mccs` | Container name (compose only) |
 | `PORT` | `8080` | Listening port of the Node process |
 | `DATA_DIR` | `/data` | Folder for saved settings (`config.json`), the admin password (`admin.json`) and uploads |
+| `TRUSTED_PROXY_HEADER` | empty | Header giving the client IP behind a trusted proxy: `CF-Connecting-IP` or `X-Forwarded-For`; empty = connection address. Environment only |
 | `BRAND_NAME` | `mccs` | Name shown in the UI. This is the fallback shown to your users: set your own |
 | `BRAND_LOGO_URL` | empty | `/img/...` path or absolute https URL; empty = text name + neutral icon |
 | `BRAND_ACCENT` | ink blue (#8cbfe6 dark, #1f5f8b light) | Accent colour, `#rgb` or `#rrggbb` |

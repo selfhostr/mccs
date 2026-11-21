@@ -65,6 +65,7 @@ form.addEventListener('submit', async (e) => {
     $('#password').focus();
     return;
   }
+  if (res.status === 503) { showAlert('Le fichier du mot de passe administrateur (admin.json) est illisible. Corrigez-le, ou supprimez-le pour revenir au mot de passe du fichier .env.'); return; }
   if (res.status === 404) { showAlert('L’espace d’administration est désactivé sur ce serveur (aucun mot de passe défini).'); return; }
   showAlert(`Connexion impossible (erreur ${res.status}). Réessayez dans un instant.`);
 });

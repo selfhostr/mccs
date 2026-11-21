@@ -23,7 +23,10 @@ Also sent: `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Fr
 - Uploads: PNG, JPEG or WebP only, checked by their magic bytes, not only the declared type; SVG is refused. Files get a random name (`logo-<16 hex>.png`) and `/uploads/` serves only names of that exact form, with `X-Content-Type-Options: nosniff`, so no path traversal is possible.
 - The server test (`/support/api/probe`) connects only to the host and port sent, validated with the same rules as the settings, verifies the certificate and sends no credentials. It is available to signed-in admins only.
 - Responses carry `X-Robots-Tag: noindex, nofollow` and `Cache-Control: no-store`.
-- The client address comes from `CF-Connecting-IP` if present, so only expose the app behind a proxy that controls this header.
+- The client address is the connection's address, or the header named by `TRUSTED_PROXY_HEADER` (`CF-Connecting-IP`, or the last `X-Forwarded-For` entry) when you set it. Set it only behind a proxy that controls that header.
+- Concurrent login attempts are counted before the password is checked: at most 10 passwords per address and per 15-minute window, even when sent in parallel.
+- An unreadable or unknown-version `admin.json` blocks admin login (HTTP 503) instead of silently falling back to `SUPPORT_PASSWORD`. Fix or delete the file; deleting it re-enables `SUPPORT_PASSWORD`.
+- The server test on the admin page can reach any host and port the container can reach, including internal ones. Only trusted administrators should have the admin password.
 
 ## Apple profile
 

@@ -88,6 +88,8 @@ function build(src) {
     brandLogoUrl: logoUrl(env('BRAND_LOGO_URL', '')),
     brandAccent: color(env('BRAND_ACCENT', ''), ''),
     brandBackground: background(env('BRAND_BACKGROUND', '')),
+    // En-tête qui donne l'IP du client derrière un proxy de confiance (vide = adresse de la connexion).
+    trustedProxyHeader: env('TRUSTED_PROXY_HEADER', '').toLowerCase(),
     davPreset: PRESET,
     mailHost: MAIL_HOST,
     davBaseUrl: DAV_BASE,
@@ -202,6 +204,7 @@ function createSettings({ env, dir }) {
         return Object.assign({}, f, {
           value: source === 'admin' ? overrides[f.key] : source === 'env' ? env[f.key] : '',
           source,
+          envValue: inEnv ? env[f.key] : '',
           effective: EFFECTIVE[f.key] ? EFFECTIVE[f.key](config) : '',
         });
       });

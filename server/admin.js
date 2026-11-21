@@ -114,36 +114,42 @@ function createAdmin({ config, settings, dataDir, send = defaultSend, serveStati
   let lastWarning = '';
   function warnOnce(msg) { if (msg !== lastWarning) { lastWarning = msg; console.error(msg); } }
 
-  // { password: { salt, hash } | null, setupDone }. Fichier absent ou illisible : mot de passe de l'environnement.
+  // { state, password: { salt, hash } | null, setupDone }.
+  // Fichier absent (et seulement absent) : mot de passe de l'environnement. Fichier illisible ou d'une
+  // version inconnue : connexion bloquée (state 'bad'), jamais de retour silencieux à SUPPORT_PASSWORD.
   function readAdmin() {
     let data;
     try {
       data = JSON.parse(fs.readFileSync(adminFile, 'utf8'));
     } catch (err) {
-      if (err.code !== 'ENOENT') warnOnce(`admin.json ignoré (${err.code || err.message}) : SUPPORT_PASSWORD reste valable.`);
-      return { password: null, setupDone: false };
+      if (err.code === 'ENOENT') return { state: 'missing', password: null, setupDone: false };
+      warnOnce(`admin.json illisible (${err.code || err.message}) : connexion bloquée. Corrigez ou supprimez ${adminFile} (la suppression réactive SUPPORT_PASSWORD).`);
+      return { state: 'bad', password: null, setupDone: false };
     }
     if (!data || typeof data !== 'object' || data.version !== ADMIN_VERSION) {
-      warnOnce('admin.json ignoré (format ou version inconnus) : SUPPORT_PASSWORD reste valable.');
-      return { password: null, setupDone: false };
+      warnOnce(`admin.json de format ou version inconnus : connexion bloquée. Corrigez ou supprimez ${adminFile} (la suppression réactive SUPPORT_PASSWORD).`);
+      return { state: 'bad', password: null, setupDone: false };
     }
     const pw = data.password;
     const password = pw && typeof pw.salt === 'string' && typeof pw.hash === 'string' ? { salt: pw.salt, hash: pw.hash } : null;
-    return { password, setupDone: data.setupDone === true };
+    return { state: 'ok', password, setupDone: data.setupDone === true };
   }
 
   function writeAdmin(next) {
+    if (readAdmin().state === 'bad') throw new HttpError(503, 'admin-file');
     writeAtomic(adminFile, JSON.stringify({ version: ADMIN_VERSION, password: next.password, setupDone: next.setupDone }, null, 2) + '\n', 0o600);
   }
 
   function enabled() {
-    return config.supportAuth.password !== '' || Boolean(readAdmin().password);
+    const a = readAdmin();
+    return config.supportAuth.password !== '' || Boolean(a.password) || a.state === 'bad';
   }
 
   // Comparaison en temps constant : haché scrypt s'il existe, sinon SUPPORT_PASSWORD.
   async function checkPassword(candidate) {
     const pw = typeof candidate === 'string' ? candidate : '';
-    const { password } = readAdmin();
+    const { state, password } = readAdmin();
+    if (state === 'bad') throw new HttpError(503, 'admin-file');
     if (password) {
       const expected = Buffer.from(password.hash, 'base64');
       const got = await scrypt(pw, Buffer.from(password.salt, 'base64'), 64);
@@ -155,8 +161,16 @@ function createAdmin({ config, settings, dataDir, send = defaultSend, serveStati
 
   /* ---------- Verrouillage ---------- */
 
+  // IP du client : en-tête du proxy seulement s'il est déclaré de confiance (TRUSTED_PROXY_HEADER),
+  // sinon l'adresse de la connexion. Pour X-Forwarded-For, seule la dernière adresse (ajoutée par le proxy) compte.
   function clientIp(req) {
-    return String(req.headers['cf-connecting-ip'] || req.socket.remoteAddress || '');
+    const h = config.trustedProxyHeader;
+    const raw = h ? req.headers[h] : undefined;
+    if (typeof raw === 'string' && raw.trim()) {
+      const v = h === 'x-forwarded-for' ? raw.split(',').pop() : raw;
+      if (v.trim()) return v.trim();
+    }
+    return String(req.socket.remoteAddress || '');
   }
   // Secondes restantes de verrouillage (0 = libre).
   function lockedFor(ip) {
@@ -165,6 +179,7 @@ function createAdmin({ config, settings, dataDir, send = defaultSend, serveStati
     return f && f.until > now && f.n >= MAX_FAILURES ? Math.ceil((f.until - now) / 1000) : 0;
   }
   // Compté avant la vérification (essais simultanés compris), effacé en cas de succès.
+  // Renvoie le nombre d'essais de la fenêtre : au-delà de MAX_FAILURES, le mot de passe n'est pas vérifié.
   function recordAttempt(ip) {
     const now = Date.now();
     const f = failures.get(ip);
@@ -173,9 +188,15 @@ function createAdmin({ config, settings, dataDir, send = defaultSend, serveStati
     failures.set(ip, cur);
     if (failures.size > 5000) {
       for (const [k, v] of failures) if (v.until <= now) failures.delete(k);
-      if (failures.size > 5000) failures.clear();
+      // Encore trop : on retire les plus anciennes entrées (ordre d'insertion), jamais toutes.
+      for (const k of failures.keys()) { if (failures.size <= 5000) break; if (k !== ip) failures.delete(k); }
     }
+    return cur.n;
   }
+  const lockedResponse = (req, res, ip, extra = {}, body = {}) => {
+    const wait = Math.max(1, lockedFor(ip));
+    return json(req, res, 429, Object.assign(body, { error: 'locked', retryAfter: wait }), Object.assign({ 'Retry-After': String(wait) }, extra));
+  };
 
   /* ---------- Sessions ---------- */
 
@@ -249,7 +270,8 @@ function createAdmin({ config, settings, dataDir, send = defaultSend, serveStati
     const wait = lockedFor(ip);
     if (wait) return json(req, res, 429, { error: 'locked', retryAfter: wait }, { 'Retry-After': String(wait) });
     const body = await readJson(req);
-    recordAttempt(ip);
+    // Revérifié après la lecture du corps : des requêtes simultanées ne dépassent pas la limite.
+    if (recordAttempt(ip) > MAX_FAILURES) return lockedResponse(req, res, ip);
     const okUser = crypto.timingSafeEqual(sha(typeof body.user === 'string' ? body.user : ''), sha(config.supportAuth.user));
     const okPass = await checkPassword(body.password);
     if (!okUser || !okPass) return json(req, res, 401, { error: 'credentials' });
@@ -303,7 +325,7 @@ function createAdmin({ config, settings, dataDir, send = defaultSend, serveStati
     const wait = lockedFor(ip);
     if (wait) return json(req, res, 429, { ok: false, error: 'locked', retryAfter: wait }, Object.assign({ 'Retry-After': String(wait) }, refresh));
     const b = await readJson(req);
-    recordAttempt(ip);
+    if (recordAttempt(ip) > MAX_FAILURES) return lockedResponse(req, res, ip, refresh, { ok: false });
     if (!(await checkPassword(b.current))) return json(req, res, 401, { ok: false, error: 'credentials' }, refresh);
     failures.delete(ip);
     const next = typeof b.next === 'string' ? b.next : '';

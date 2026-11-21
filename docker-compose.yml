@@ -48,6 +48,8 @@ services:
       # Admin area /support (initial password; empty and no /data/admin.json = disabled)
       SUPPORT_USER: "${SUPPORT_USER:-}"
       SUPPORT_PASSWORD: "${SUPPORT_PASSWORD:-}"
+      # Header giving the client IP behind a trusted proxy (CF-Connecting-IP or X-Forwarded-For)
+      TRUSTED_PROXY_HEADER: "${TRUSTED_PROXY_HEADER:-}"
       # Apple configuration profile
       PROFILE_ORGANIZATION: "${PROFILE_ORGANIZATION:-}"
       PROFILE_ID_PREFIX: "${PROFILE_ID_PREFIX:-}"

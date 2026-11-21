@@ -43,7 +43,7 @@ One Node 22 process using only the built-in `http` module, with no npm dependenc
 - The Apple profile is not signed, so iOS and macOS show "Not signed" when installing it.
 - The guides describe third-party apps as they look today; a new app version can make a step out of date.
 - It does not check that your mail server answers, and the `generic` preset has had less use than `mdaemon`.
-- The `/support` lock-out keys on the `CF-Connecting-IP` header, so only expose the app behind a proxy that controls it.
+- Behind a reverse proxy, set `TRUSTED_PROXY_HEADER` (`CF-Connecting-IP` or `X-Forwarded-For`) so the `/support` lock-out sees real client addresses; otherwise all clients share the proxy's address.
 - Early: variable names and endpoints can still change before 1.0. No published image yet.
 
 ## Contributing

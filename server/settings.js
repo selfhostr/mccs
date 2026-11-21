@@ -48,7 +48,7 @@ const FIELDS = [
 ];
 
 // Réglages qui ne se changent que dans l'environnement (jamais depuis l'admin).
-const ENV_ONLY = ['PORT', 'SUPPORT_USER', 'SUPPORT_PASSWORD', 'DATA_DIR'];
+const ENV_ONLY = ['PORT', 'SUPPORT_USER', 'SUPPORT_PASSWORD', 'DATA_DIR', 'TRUSTED_PROXY_HEADER'];
 
 const BY_KEY = new Map(FIELDS.map((f) => [f.key, f]));
 const MAX_LEN = 500;

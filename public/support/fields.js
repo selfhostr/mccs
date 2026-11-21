@@ -124,7 +124,8 @@ export function resolver(entries) {
   const fallback = (k) => {
     const e = entries.get(k);
     const f = e && e.field;
-    if (f && f.source === 'env') return f.value;
+    // Valeur du .env (même quand un réglage « modifié ici » la masque) : c'est elle qui s'applique si l'on vide le champ.
+    if (f && f.envValue) return f.envValue;
     const mail = () => resolve('MAIL_HOST');
     const base = () => resolve('DAV_BASE_URL').replace(/\/+$/, '');
     switch (k) {

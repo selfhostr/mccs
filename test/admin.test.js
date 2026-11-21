@@ -11,6 +11,7 @@ const DATA = fs.mkdtempSync(path.join(os.tmpdir(), 'mccs-admin-'));
 process.env.DATA_DIR = DATA;
 process.env.SUPPORT_PASSWORD = 'mot-de-passe-initial';
 process.env.PUBLIC_URL = 'http://127.0.0.1';
+process.env.TRUSTED_PROXY_HEADER = 'CF-Connecting-IP';
 delete process.env.SUPPORT_USER;
 const { server } = require('../server/index');
 const { client, rawRequest, startAdmin, PNG, JPEG, WEBP, GIF } = require('./helpers/admin-client');
