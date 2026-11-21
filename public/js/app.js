@@ -406,7 +406,7 @@ function renderGuide(deviceId, guideId, stepParam) {
         ${st.sub ? `<p class="sub">${fmt(st.sub)}</p>` : ''}
         ${renderShot(st, g, n)}
       </div>
-      <label class="gdone-label"><input type="checkbox" class="gdone" data-step="${n}" aria-label="Étape ${n} faite"><span aria-hidden="true">Fait</span></label>
+      <label class="gdone-label"><input type="checkbox" class="gdone" data-step="${n}" aria-label="Étape ${n} faite"><span aria-hidden="true">C’est fait</span></label>
     </li>`;
   const sectionsHtml = groups.map(({ section, items }) => {
     const icon = SERVICE_META[section.service] ? ICONS[SERVICE_META[section.service].icon] : ICONS.gear;

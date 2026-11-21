@@ -73,7 +73,7 @@ const files = new Map();
 // Feuille générée : couleur d'accent (BRAND_ACCENT). Fichier séparé plutôt qu'un style inline,
 // pour respecter la CSP (style-src 'self'). Incluse dans le hash de cache-busting ci-dessous.
 {
-  // Sans BRAND_ACCENT : accent neutre défini par app.css (#e5e5e5 sombre, #404040 clair).
+  // Sans BRAND_ACCENT : accent par défaut défini par app.css (bleu #8cbfe6 sombre, #1f5f8b clair).
   const body = Buffer.from(config.brandAccent ? `:root { --accent: ${config.brandAccent}; --accent-on: #ffffff; }\n` : ':root {}\n');
   files.set('/brand.css', { body, gz: zlib.gzipSync(body, { level: 9 }), type: TYPES['.css'], ext: '.css' });
 }
