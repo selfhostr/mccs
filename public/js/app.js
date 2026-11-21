@@ -254,15 +254,12 @@ function showWizard(html, step, deviceId = '') {
   view.classList.remove('fade-in');
   void view.offsetWidth;
   view.classList.add('fade-in');
-  document.body.classList.toggle('has-gnav', !!view.querySelector('.gnav'));
   window.scrollTo({ top: 0, behavior: 'auto' });
   const h = view.querySelector('[data-focus]') || view.querySelector('h1');
   if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
 }
 
 function renderHome() {
-  state.nav = null;
-  document.body.classList.remove('has-gnav');
   $('#view-wizard').hidden = true;
   $('#view-home').hidden = false;
   if (state.email) $('#email').value = state.email;
@@ -271,7 +268,6 @@ function renderHome() {
 }
 
 function renderDevices() {
-  state.nav = null;
   const detected = state.detected;
   const ordered = detected ? [DEVICES.find((d) => d.id === detected), ...DEVICES.filter((d) => d.id !== detected)] : DEVICES;
   const cards = ordered.map((d) => {
@@ -311,7 +307,6 @@ function servicesPicker() {
 }
 
 function renderApps(deviceId) {
-  state.nav = null;
   const dev = DEVICES.find((d) => d.id === deviceId);
   if (!dev) return go('#/appareil');
   const rec = recommendedApp(deviceId);
@@ -385,50 +380,76 @@ function renderGuide(deviceId, guideId, stepParam) {
   const steps = guideSteps(g);
   const total = steps.length;
   const base = `#/guide/${deviceId}/${guideId}`;
-  if (stepParam === 'fin') return renderDone(dev, g, base + '/' + total);
-  let n = Number(stepParam || 1);
-  if (!Number.isInteger(n) || n < 1 || n > total) return go(base);
+  if (stepParam === 'fin') return renderDone(dev, g, base);
+  const target = stepParam === undefined || stepParam === '' ? 0 : Number(stepParam);
+  if (!Number.isInteger(target) || target < 0 || target > total) return go(base);
 
-  const { st, section } = steps[n - 1];
-  const secIcon = SERVICE_META[section.service] ? ICONS[SERVICE_META[section.service].icon] : ICONS.gear;
-  const prev = n > 1 ? `${base}/${n - 1}` : `#/appareil/${deviceId}`;
-  const next = n < total ? `${base}/${n + 1}` : `${base}/fin`;
-  state.nav = { prev, next };
-  const callouts = n === 1 ? (g.callouts || []).map((c) => `<div class="callout${c.kind === 'warn' ? ' callout-warn' : ''}">${ICONS[c.kind === 'warn' ? 'warn' : 'info']}<p>${fmt(c.t)}</p></div>`).join('') : '';
+  const callouts = (g.callouts || []).map((c) => `<div class="callout${c.kind === 'warn' ? ' callout-warn' : ''}">${ICONS[c.kind === 'warn' ? 'warn' : 'info']}<p>${fmt(c.t)}</p></div>`).join('');
+  // Étapes regroupées par section, numérotation continue sur tout le guide.
+  const groups = [];
+  steps.forEach(({ st, section }, i) => {
+    if (!groups.length || groups[groups.length - 1].section !== section) groups.push({ section, items: [] });
+    groups[groups.length - 1].items.push({ st, n: i + 1 });
+  });
+  const stepHtml = ({ st, n }) => `<li class="gstep" id="etape-${n}">
+      <div class="gstep-head">
+        <span class="gstep-num" aria-hidden="true">${n}</span>
+        <h3 class="sr-only">Étape ${n} sur ${total}</h3>
+        <label class="gdone-label"><input type="checkbox" class="gdone" data-step="${n}" aria-label="Étape ${n} faite"><span aria-hidden="true">Fait</span></label>
+      </div>
+      <div class="gstep-body">
+        <p class="gtext">${fmt(st.t)}</p>
+        ${st.dl ? `<div class="download-box">
+          <a class="btn btn-primary" href="${esc(profileUrl())}" download>${ICONS.download}Télécharger le profil</a>
+          <p class="download-meta">Pour <strong>${esc(state.email)}</strong> : ${esc(listFr([...state.services].map((s) => SERVICE_META[s].label)))}. Sans mot de passe.</p>
+        </div>` : ''}
+        ${st.f ? fields(st.f) : ''}
+        ${st.sub ? `<p class="sub">${fmt(st.sub)}</p>` : ''}
+        ${renderShot(st, g, n)}
+      </div>
+    </li>`;
+  const sectionsHtml = groups.map(({ section, items }) => {
+    const icon = SERVICE_META[section.service] ? ICONS[SERVICE_META[section.service].icon] : ICONS.gear;
+    return `<section class="card gsection">
+      <h2 class="gsection-title">${icon}${esc(section.title)}</h2>
+      <ol class="gsteps" start="${items[0].n}">${items.map(stepHtml).join('')}</ol>
+    </section>`;
+  }).join('');
 
   showWizard(`
     <header class="guide-head">
       <span class="app-icon">${ICONS[g.icon]}</span>
-      <div><p class="guide-kicker">${esc(dev.name)}</p><h1>${esc(g.name)}</h1></div>
+      <div><p class="guide-kicker">${esc(dev.name)}</p><h1 data-focus>${esc(g.name)}</h1></div>
     </header>
-    ${n === 1 ? `<details class="about"><summary>${ICONS.info}En savoir plus sur cette méthode</summary><p>${fmt(g.intro)}</p></details>` : ''}
+    <p class="guide-intro">${fmt(g.intro)}</p>
     ${callouts}
-    <article class="card gcard" aria-labelledby="gstep-title">
-      <div class="gprog">
-        <h2 id="gstep-title" data-focus>Étape ${n} sur ${total}</h2>
-        <span class="gsec">${secIcon}${esc(section.title)}</span>
-      </div>
-      <progress class="gbar" max="${total}" value="${n}" aria-hidden="true"></progress>
-      <p class="gtext">${fmt(st.t)}</p>
-      ${st.dl ? `<div class="download-box">
-        <a class="btn btn-primary" href="${esc(profileUrl())}" download>${ICONS.download}Télécharger le profil</a>
-        <p class="download-meta">Pour <strong>${esc(state.email)}</strong> : ${esc(listFr([...state.services].map((s) => SERVICE_META[s].label)))}. Sans mot de passe.</p>
-      </div>` : ''}
-      ${st.f ? fields(st.f) : ''}
-      ${st.sub ? `<p class="sub">${fmt(st.sub)}</p>` : ''}
-      ${renderShot(st, g, n)}
-    </article>
-    <nav class="gnav" aria-label="Navigation entre les étapes">
-      <a class="btn btn-ghost" href="${prev}" rel="prev">${ICONS.back}Précédent</a>
-      <a class="btn btn-primary" href="${next}" rel="next">${n < total ? 'Suivant' : 'Terminer'}${ICONS.arrow}</a>
-    </nav>
+    <p class="gcount" aria-live="polite"><span id="gdone-count">0</span> étape(s) faite(s) sur ${total}</p>
+    ${sectionsHtml}
+    <div class="gfinish">
+      <a class="btn btn-primary btn-block" href="${base}/fin">J’ai terminé${ICONS.arrow}</a>
+      <a class="link-plain" href="#/appareil/${deviceId}">${ICONS.back}Changer d’application</a>
+    </div>
     ${guideLinks()}
     ${deviceId === 'ios' || deviceId === 'android' ? phoneQr(deviceId, g.id) : ''}`, 4, deviceId);
-  document.title = `Étape ${n}/${total} · ${g.name} · ${state.cfg.brand}`;
+  document.title = `${g.name} · ${state.cfg.brand}`;
+
+  const view = $('#view');
+  view.querySelectorAll('input.gdone').forEach((cb) => cb.addEventListener('change', () => {
+    cb.closest('.gstep').classList.toggle('is-done', cb.checked);
+    const done = view.querySelectorAll('input.gdone:checked').length;
+    $('#gdone-count').textContent = String(done);
+    document.title = `${done}/${total} · ${g.name} · ${state.cfg.brand}`;
+  }));
+  // Ancien lien vers une étape précise (#/guide/…/<n>) : on fait défiler jusqu'à elle.
+  if (target > 0) {
+    const li = document.getElementById('etape-' + target);
+    li.scrollIntoView({ block: 'start' });
+    li.setAttribute('tabindex', '-1');
+    li.focus({ preventScroll: true });
+  }
 }
 
 function renderDone(dev, g, lastStep) {
-  state.nav = { prev: lastStep, next: null };
   const covered = g.covers.filter((s) => state.services.has(s));
   const list = covered.length ? covered : g.covers;
   const NOUN = { mail: 'vos e-mails', calendar: 'votre agenda', contacts: 'vos contacts' };
@@ -669,13 +690,6 @@ function bind() {
     if (cb) { const d = cb.closest('dialog'); if (d) d.close(); }
   });
 
-  // Flèches gauche/droite : étape précédente/suivante du guide.
-  document.addEventListener('keydown', (e) => {
-    if (!state.nav || openDialog() || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey) return;
-    if (e.target instanceof Element && e.target.closest('input, textarea, select, [contenteditable]')) return;
-    if (e.key === 'ArrowRight' && state.nav.next) { e.preventDefault(); go(state.nav.next); }
-    else if (e.key === 'ArrowLeft' && state.nav.prev) { e.preventDefault(); go(state.nav.prev); }
-  });
   window.addEventListener('hashchange', route);
   bindPanels();
 }
