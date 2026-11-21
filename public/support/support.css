@@ -4,7 +4,6 @@
 @media (min-width: 980px) { .sup-layout { grid-template-columns: minmax(0, 460px) minmax(0, 1fr); gap: 32px; } }
 .sup-form { padding: 24px 22px; position: relative; }
 .sup-row { display: grid; gap: 0 14px; }
-@media (min-width: 520px) { .sup-row { grid-template-columns: 1fr 1fr; align-items: end; } }
 .field select {
   width: 100%; font: inherit; font-size: .92rem; color: var(--text); background-color: var(--bg-2);
   border: 1px solid var(--field-border); border-radius: var(--radius-sm); padding: 12px 14px; min-height: 52px; appearance: none; -webkit-appearance: none;
@@ -28,3 +27,10 @@
 .sup-send { padding-top: 18px; border-top: 1px solid var(--border); margin-bottom: 10px; }
 @media (max-width: 519px) { .sup-send .btn, .sup-actions .btn { flex: 1 1 100%; } .sup-qr-code { margin: 0 auto; } }
 .sup-link .kv-value { word-break: break-all; }
+.sup-result.is-empty .sup-filled, .sup-result:not(.is-empty) .sup-empty { display: none; }
+.sup-empty { display: grid; justify-items: center; text-align: center; gap: 6px; padding: 48px 12px; color: var(--muted); }
+.sup-empty h2 { color: var(--text); margin: 6px 0 0; }
+.sup-empty p { max-width: 40ch; margin: 0; font-size: .9rem; }
+.sup-empty-icon { width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%; background: var(--accent-soft); color: var(--accent-text); }
+.sup-empty-icon svg { width: 26px; height: 26px; }
+@media (max-width: 979px) { .sup-result.is-empty { display: none; } }

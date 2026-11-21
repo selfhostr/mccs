@@ -43,7 +43,7 @@ function toast(msg) {
 function fillApps() {
   const dev = $('#s-device').value;
   const sel = $('#s-app');
-  sel.innerHTML = '<option value="">Laisser le client choisir</option>';
+  sel.innerHTML = '<option value="">Au choix du client</option>';
   sel.disabled = !dev;
   if (!dev) return;
   for (const id of APPS[dev]) {
@@ -137,7 +137,7 @@ function render() {
   const sms = `${cfg.brand} : configurez votre messagerie ${email} en suivant ce lien : ${data.link}`;
   const phone = $('#s-phone').value.replace(/[^+\d]/g, '');
   $('#r-sms').href = `sms:${phone}?&body=${encodeURIComponent(sms)}`;
-  $('#sup-result').hidden = false;
+  $('#sup-result').classList.remove('is-empty');
   return true;
 }
 
