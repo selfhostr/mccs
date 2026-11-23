@@ -17,6 +17,9 @@ All notable changes to mccs. The format follows [Keep a Changelog](https://keepa
 
 ### Changed
 
+- Real brand logos (Windows, macOS, iPhone/iPad, Android, Outlook, Thunderbird, Gmail, Samsung, Apple) for devices and apps, replacing generic pictograms (Simple Icons, CC0; Windows and Outlook drawn for the project; see `public/img/brands/README.md`).
+- Pages no longer scroll when their content fits the screen (flex body instead of a fixed `calc()` height).
+- Slimmer one-line footer with support phone and e-mail icons, stacked and centred on mobile.
 - `/support` uses a sign-in form and a session instead of HTTP Basic.
 - The project is now `mccs` (Mail, Calendar, Contacts Setup) and lives at `github.com/selfhostr/mccs`.
 - README and documentation follow the same layout as the other selfhostr projects.
