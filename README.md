@@ -10,7 +10,7 @@
 
 ## Overview
 
-`mccs` (Mail, Calendar, Contacts Setup) is a web page you host for the customers of your mail service. They type their address, pick Windows, macOS, iPhone, iPad or Android, and get a short guide with every value ready to copy. It never asks for a password, stores nothing and sets no cookies. Free, for good: MIT licence, no paid edition.
+`mccs` (Mail, Calendar, Contacts Setup) is a web page you host for the customers of your mail service. They type their address, pick Windows, macOS, iPhone, iPad or Android, and get a short guide with every value ready to copy. By default it never asks for a password; an optional check (off by default) lets customers verify their password before setup, without storing it. It stores nothing and sets no cookies. Free, for good: MIT licence, no paid edition.
 
 ## Quick start
 

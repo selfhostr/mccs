@@ -1,6 +1,6 @@
 # Security policy
 
-mccs shows server settings to your customers and builds an Apple profile. It asks for no password and stores nothing, but a mistake in the profile, the headers or the `/support` page matters. Thank you for reporting one.
+mccs shows server settings to your customers and builds an Apple profile. By default it asks for no password; when the optional connection test is on, it relays a password to your own mail server once, without storing or logging it. It stores nothing, but a mistake in the profile, the headers or the `/support` page matters. Thank you for reporting one.
 
 ## Supported versions
 

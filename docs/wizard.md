@@ -9,6 +9,21 @@ The wizard has four steps: address, device, application, then a guide that shows
 - Gmail and Samsung apps are detected on Android and put forward.
 - The Help panel (labelled "Aide" in the French interface) holds an FAQ and your support contact.
 
+## Optional password check
+
+When `CONNECTION_TEST` is on (see [Configuration](configuration.md#password-check)), the first screen asks for the name, the email address and the mailbox password, with a "show/hide" button, and its button reads "Vérifier ma connexion". The note under it says the password only serves to check the connection and is not stored.
+
+The result screen shows two lines, "Réception" (IMAP) and "Envoi" (SMTP), each with an icon, a short status and the help message you set for that result, plus links to the Help panel, the webmail and your support phone or email.
+
+- Both work: "Continuer" goes on to the device choice.
+- Receiving works but sending fails: "Continuer" stays the main button, with "Réessayer".
+- Receiving fails (wrong password, blocked account, server unreachable...): "Réessayer" brings back the form with an empty password field; "Continuer sans vérifier" goes on anyway.
+- Too many checks, or an address outside `ALLOWED_DOMAINS`: a notice with your message and "Continuer sans vérifier".
+
+"Continuer sans vérifier" is also offered under the form. The password stays in the page only while it is sent: the field is cleared at once, it is never shown again and never ends up in the URL, browser storage, the QR code or the history. A link from the support page (`?email=...&device=...`) still opens the requested screen directly, without the check.
+
+With the option off, the first screen is unchanged: name and address only.
+
 ## Open the wizard already filled in
 
 The wizard accepts query parameters, so you can send a link that skips steps:

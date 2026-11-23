@@ -30,7 +30,7 @@ server {
 Set `PUBLIC_URL` to the same address.
 
 !!! warning
-    The `/support` rate limiter keys on the connection's address by default. Behind a proxy, set `TRUSTED_PROXY_HEADER` to the header your proxy sets: `CF-Connecting-IP` behind Cloudflare, or `X-Forwarded-For` behind nginx or Caddy (only the last address, the one added by your proxy, is used). Never set it when clients can reach the app directly: they could then spoof the header. Without it, all clients behind the proxy share one address, so the lock applies to everyone.
+    The `/support` rate limiter, and the per-IP limit of the optional password check (`/api/test`), key on the connection's address by default. Behind a proxy, set `TRUSTED_PROXY_HEADER` to the header your proxy sets: `CF-Connecting-IP` behind Cloudflare, or `X-Forwarded-For` behind nginx or Caddy (only the last address, the one added by your proxy, is used). Never set it when clients can reach the app directly: they could then spoof the header. Without it, all clients behind the proxy share one address, so the lock applies to everyone.
 
 ## Caching
 

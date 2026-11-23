@@ -29,6 +29,10 @@ The compose file mounts the `mccs-data` volume on `/data`. Without a writable `/
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURITY` | `MAIL_HOST` / `465` / `SSL/TLS` | Outgoing server |
 | `WEBMAIL_URL` | `https://MAIL_HOST/` | Webmail link |
 | `ALLOWED_DOMAINS` | empty | Email domains accepted by the connection test, comma-separated (`example.com, example.org`); empty = all |
+| `CONNECTION_TEST` | `false` | Let customers check their password before setup (`POST /api/test`). Also accepts `1`, `on`, `yes` in `.env`; the admin saves `true` or `false` |
+| `CONNECTION_TEST_MAX_PER_EMAIL` | `5` | Checks allowed per email address in 15 minutes (1 to 10000) |
+| `CONNECTION_TEST_MAX_PER_IP` | `20` | Checks allowed per client IP in 15 minutes, all addresses together (1 to 10000) |
+| `TEST_MSG_IMAP_<STATUS>`, `TEST_MSG_SMTP_<STATUS>`, `TEST_MSG_RATE_LIMITED`, `TEST_MSG_DOMAIN` | French texts | Message shown to the customer for each result of the check, see below |
 | `DAV_PRESET` | `mdaemon` | Server type, `mdaemon` or `generic`. Set by the admin's automatic detection; still accepted in `.env` |
 | `DAV_BASE_URL` | `https://MAIL_HOST` | Base of all DAV URLs |
 | `CALDAV_URL`, `CARDDAV_URL`, `TASKS_URL` | per server type | Generic server URLs shown before an address is typed |
@@ -60,6 +64,18 @@ The compose file mounts the `mccs-data` volume on `/data`. Without a writable `/
 Ports and security labels: `IMAP_PORT` 993, `IMAP_SECURITY` `SSL/TLS`, `SMTP_PORT` 465, `SMTP_SECURITY` `SSL/TLS`.
 
 `ALLOWED_DOMAINS` lists the email domains for which the customer connection test is allowed, separated by commas, for example `example.com, example.org`. Case and spaces do not matter. Empty accepts every domain.
+
+## Password check
+
+`CONNECTION_TEST` (off by default) adds a password field to the home page: mccs logs in to your IMAP server, then, if that worked, to your SMTP server, and tells the customer what works. Nothing is stored. Turn it on in the setup assistant (step "Serveurs mail") or in Settings > "Vérification du mot de passe". **Before turning it on, whitelist the mccs IP address in your mail server's brute-force protection**: see [Security](security.md#whitelist-mccs-on-your-mail-server).
+
+`CONNECTION_TEST_MAX_PER_EMAIL` (5) and `CONNECTION_TEST_MAX_PER_IP` (20) limit the checks per address and per client IP over 15 minutes. They are settings rather than constants because the right values depend on your mail server's own lock threshold and on how many customers share one IP (an office behind one NAT). Keep the per-address limit below your server's lock threshold. Behind a proxy, set `TRUSTED_PROXY_HEADER`, otherwise every customer shares the proxy's address and the per-IP limit applies to all of them together.
+
+### Help messages
+
+Each result has an editable message (Settings > "Messages d'aide"), one per status and per service: `TEST_MSG_IMAP_OK`, `TEST_MSG_IMAP_AUTH_FAILED`, `TEST_MSG_IMAP_BLOCKED`, `TEST_MSG_IMAP_UNREACHABLE`, `TEST_MSG_IMAP_TLS_ERROR`, `TEST_MSG_IMAP_TIMEOUT`, `TEST_MSG_IMAP_ERROR`, the same for `TEST_MSG_SMTP_*` plus `TEST_MSG_SMTP_SKIPPED` (SMTP not tried because IMAP failed), and `TEST_MSG_RATE_LIMITED` and `TEST_MSG_DOMAIN`. Plain text, 500 characters at most; a line break starts a new paragraph; HTML is shown as text. Empty = the built-in French text. They are public (served in `/api/config`).
+
+The FAQ of the Help panel is not editable yet: its answers embed live values (server names, ports, webmail link) and formatting, which needs its own editor.
 
 ## Calendar and contacts
 

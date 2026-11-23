@@ -1,6 +1,6 @@
 # Endpoints
 
-Only `GET` and `HEAD` are accepted, except `POST` and `PUT` on `/support/api/*`; anything else gets 405.
+Only `GET` and `HEAD` are accepted, except `POST` and `PUT` on `/support/api/*` and `POST` on `/api/test`; anything else gets 405.
 
 | Path | Purpose |
 |---|---|
@@ -9,9 +9,26 @@ Only `GET` and `HEAD` are accepted, except `POST` and `PUT` on `/support/api/*`;
 | `/uploads/<kind>-<16 hex>.<png\|jpg\|webp>` | Logo or background uploaded from the admin, served from `/data/uploads`, cached for a year |
 | `/profile.mobileconfig?email=&name=&services=mail,calendar,contacts` | Unsigned Apple profile, no password; 400 on invalid email |
 | `/mail/config-v1.1.xml?emailaddress=` | Thunderbird autoconfig (also at `/.well-known/autoconfig/mail/`) |
-| `/api/config` | Public settings, read by the browser; nothing secret |
+| `/api/config` | Public settings, read by the browser; nothing secret. Includes `connectionTest` (boolean) and `testMessages` (`{ imap: { status: text }, smtp: {...}, rate_limited, domain }`) |
+| `POST /api/test` | Password check, see below. 404 while `CONNECTION_TEST` is off |
 | `/brand.css` | Generated accent colour and page background, `no-cache` |
 | `/healthz` | Health check, answers `ok` |
+
+## Password check: `POST /api/test`
+
+Only when `CONNECTION_TEST` is on (404 otherwise). Body `{ "email": "...", "password": "..." }`, `Content-Type: application/json`, 8 KB at most; `Origin` must name this server or `PUBLIC_URL`. Answers are JSON with `Cache-Control: no-store`. Any other field (a host, a port) is ignored: only the configured servers are contacted.
+
+| Status | Body | When |
+|---|---|---|
+| 200 | `{ "imap": { "status" }, "smtp": { "status" } }` | The check ran. `status` is `ok`, `auth_failed`, `blocked`, `unreachable`, `tls_error`, `timeout` or `error`; SMTP is `skipped` when IMAP was not `ok` |
+| 400 | `{ "error": "json" }` | Body is not a JSON object |
+| 403 | `{ "error": "origin" }` or `{ "error": "domain" }` | Foreign or missing `Origin`; address outside `ALLOWED_DOMAINS` |
+| 405 | `{ "error": "method" }`, `Allow: POST` | Not a POST |
+| 413 | `{ "error": "size" }` | Body over 8 KB |
+| 415 | `{ "error": "type" }` | Not `application/json` |
+| 422 | `{ "error": "email" }` or `{ "error": "password" }` | Invalid address; password missing, longer than 1024 characters, or containing NUL, CR or LF |
+| 429 | `{ "error": "rate_limited", "retryAfter" }` (seconds), `Retry-After` | Over `CONNECTION_TEST_MAX_PER_EMAIL` for this address or `CONNECTION_TEST_MAX_PER_IP` for this client IP in 15 minutes |
+| 503 | `{ "error": "busy" }` | 50 checks already running |
 
 ## Admin API
 

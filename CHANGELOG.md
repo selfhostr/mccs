@@ -13,6 +13,8 @@ All notable changes to mccs. The format follows [Keep a Changelog](https://keepa
 - The guide shows one step at a time, with "Step n of N", a progress bar, Previous and Next buttons, a slide transition and a screenshot column that appears only when the step has a screenshot. Each step has its own URL (`#/guide/<device>/<guide>/<n>`); the "done" checkboxes are gone.
 - Admin API under `/support/api/*`: session sign-in (cookie limited to `/support`), settings, logo and background upload (`/uploads/`), TLS test of the mail servers, admin password change (scrypt hash in `/data/admin.json`). `ALLOWED_DOMAINS` setting.
 
+- Optional password check (`CONNECTION_TEST`, off by default): the home page asks for the mailbox password and `POST /api/test` logs in to the configured IMAP server, then SMTP (`AUTH PLAIN` or `LOGIN`, no message sent), and shows one line per service with an editable help message per result (`TEST_MSG_*`, Settings > "Messages d'aide"). Limits per address (`CONNECTION_TEST_MAX_PER_EMAIL`, 5) and per IP (`CONNECTION_TEST_MAX_PER_IP`, 20) over 15 minutes, `ALLOWED_DOMAINS` enforced, password never stored, logged or returned. The admin switch sits in the assistant's "Serveurs mail" step and in Settings; the "whitelist mccs on your mail server" notice (with MDaemon Dynamic Screening when MDaemon is recognised) now shows only when the check is on.
+
 - Automatic detection of the calendar (CalDAV) and contacts (CardDAV) addresses in the admin, as clients do (RFC 6764: DNS `SRV`/`TXT`, then `/.well-known` with redirections), with MDaemon recognised. It runs by itself at the "Calendrier" step of the setup assistant and on demand ("Détecter automatiquement") in Settings. New route `POST /support/api/discover`.
 
 ### Changed

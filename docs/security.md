@@ -2,10 +2,10 @@
 
 ## Design
 
-- No password is asked, sent to or stored by this app. Users type it only in their own mail client.
+- By default no password is asked, sent to or stored by this app: users type it only in their own mail client. The optional password check (off by default, below) is the only exception.
 - No cookies on the customer site, no analytics, no tracking, no third-party requests. The only cookie is the admin session, limited to `/support` (see below).
 - The QR code is generated locally in the browser (`public/js/qr.js`, MIT, after Nayuki's implementation).
-- Only GET and HEAD are accepted, except POST and PUT on `/support/api/*`.
+- Only GET and HEAD are accepted, except POST and PUT on `/support/api/*` and POST on `/api/test` (when the password check is on).
 
 ## HTTP headers
 
@@ -29,6 +29,36 @@ Also sent: `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Fr
 - An unreadable or unknown-version `admin.json` blocks admin login (HTTP 503) instead of silently falling back to `SUPPORT_PASSWORD`. Fix or delete the file; deleting it re-enables `SUPPORT_PASSWORD`.
 - The server test on the admin page can reach any host and port the container can reach, including internal ones. Only trusted administrators should have the admin password.
 
+## Optional password check
+
+Off by default. When an admin turns on "Vérifier le mot de passe des clients" (`CONNECTION_TEST`), the home page also asks for the mailbox password and `POST /api/test` checks it before the customer sets up a device.
+
+What it does:
+
+- It connects **only** to the IMAP and SMTP servers configured in the admin (`IMAP_HOST`/`IMAP_PORT`/`IMAP_SECURITY`, same for SMTP). Nothing in the request can change the host, port or security: the endpoint is not a proxy.
+- IMAP: TLS (or STARTTLS, as configured) with a verified certificate and at least TLS 1.2, then `LOGIN` and `LOGOUT`. The password is sent as an IMAP quoted string (with `\` and `"` escaped) when it is printable ASCII, otherwise as a literal `{n}`, so quotes, backslashes, accents and spaces arrive unchanged. No credential is sent before TLS is up; bytes received before a STARTTLS handshake abort the test.
+- SMTP: only **after** a successful IMAP login, so a wrong password counts once on your mail server. `EHLO`, `STARTTLS` if configured, `AUTH PLAIN` (or `AUTH LOGIN` when only that is offered), then `QUIT`. No message is ever sent (`MAIL`, `RCPT` and `DATA` are never issued).
+- Each service has an 8-second budget. The answer gives one status per service: `ok`, `auth_failed`, `blocked` (the server's reply says the account or address is locked, blocked, banned, or refuses the connection at greeting), `unreachable`, `tls_error`, `timeout`, `error`, and `skipped` for SMTP when IMAP failed.
+
+What is never kept:
+
+- The password is never logged, never returned to the browser, never written to disk and never put in a URL, a cookie, browser storage, the QR code or the history. In the browser it is read from the field once, the field is cleared immediately, and it is not kept in the page state; it is never shown again.
+- On the server, the raw request body is zeroed once parsed, the password is copied into a buffer that is zeroed after the test, and every network write that carries it is zeroed once handed to the socket. JavaScript strings cannot be wiped: the parsed string, and the base64 strings built for SMTP authentication, are dropped as soon as possible and left to the garbage collector.
+- Server replies are not logged. An internal error logs one line without the error message (only an error code), since a message could carry request data.
+
+Protection against abuse:
+
+- The endpoint answers 404 while the option is off, and checks `Origin` (this server or `PUBLIC_URL`, otherwise 403), `Content-Type: application/json` (415) and a body of 8 KB at most (413).
+- `ALLOWED_DOMAINS` applies: an address outside those domains gets 403 `{ "error": "domain" }` without any connection.
+- Attempts are counted **before** connecting, per email address (`CONNECTION_TEST_MAX_PER_EMAIL`, 5 by default) and per client IP (`CONNECTION_TEST_MAX_PER_IP`, 20 by default) over 15 minutes, synchronously, so parallel requests cannot exceed the limits. Over the limit: 429 `{ "error": "rate_limited", "retryAfter" }`. The client IP follows `TRUSTED_PROXY_HEADER`, as for the admin. At most 50 checks run at once on the instance (503 beyond).
+- The counters live in memory: a restart resets them.
+
+### Whitelist mccs on your mail server
+
+A browser cannot speak IMAP or SMTP, so every check is made by the mccs server, and all of them come from **one IP address**: the one mccs uses to reach your mail server. Brute-force protections (fail2ban, Dovecot auth penalties, MDaemon Dynamic Screening, Postfix/anvil rate limits...) see many wrong passwords from that single address and may block it, after which no customer can check their connection, sometimes for hours. Add the mccs address to the allow list of that protection before turning the option on. With MDaemon: Security > Dynamic Screening > Dynamic Allow List. mccs's own per-address and per-IP limits reduce, but do not remove, this risk. Keep `CONNECTION_TEST_MAX_PER_EMAIL` below your server's lock threshold.
+
+Because of the whitelist, an attacker could use the check to try passwords for your accounts without hitting your server's own protection: the per-address and per-IP limits are then the only brake. Keep them low, and set `ALLOWED_DOMAINS` to your own domains.
+
 ## Apple profile
 
 `/profile.mobileconfig` is not signed, so iOS and macOS display "Not signed" when installing it. It contains no password. Signing it is recommended in production, for example:
@@ -46,7 +76,7 @@ Run behind an HTTPS reverse proxy (see [Reverse proxy and HTTPS](reverse-proxy.m
 
 ## What it does not protect
 
-- It does not check that the servers it describes are reachable or correctly configured.
+- Unless the optional password check is on, it does not check that the servers it describes are reachable or correctly configured.
 - The Apple profile is unsigned, see above.
 - `/support` is one shared admin account: serve it over HTTPS only, and treat the password like any admin credential. Anyone who can write to `/data` can reset it by deleting `admin.json`.
 - There are no published releases or images yet, so there is nothing to verify with a signature. Build from a tag or commit you have read.
