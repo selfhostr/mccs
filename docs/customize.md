@@ -8,7 +8,7 @@ Name, logo, accent colour, page background and support contact are environment v
 
 ## Guides
 
-Guides are defined in `public/js/guides.js`: devices (`windows`, `macos`, `ios`, `android`), the apps offered per device, and the steps of each guide (ids such as `ios-profile`, `ios-manual`, `mac-profile`, `mac-manual`, `outlook-new`, `outlook-classic`, `caldavsync`, `thunderbird`, `gmail`, `samsung`, `davx5`).
+Guides are defined in `public/js/guides.js`: devices (`windows`, `macos`, `ios`, `android`), the apps offered per device, and the steps of each guide (ids such as `ios-profile`, `ios-manual`, `mac-profile`, `mac-manual`, `outlook-new`, `outlook-classic`, `caldavsync`, `thunderbird`, `gmail`, `samsung`, `outlook-mobile`, `davx5`).
 
 Mini syntax used in step texts:
 

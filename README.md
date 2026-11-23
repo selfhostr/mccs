@@ -25,7 +25,7 @@ Open http://localhost:8080 and try the wizard with an address on your domain. Se
 ## Features
 
 - **Guided wizard.** Address, device, app, then a step-by-step guide with copyable values.
-- **Many apps.** Outlook (new and classic), CalDAV Synchronizer, Thunderbird, Apple Mail, Gmail, Samsung apps and DAVx5.
+- **Many apps.** Outlook (new, classic and mobile for iPhone and Android), CalDAV Synchronizer, Thunderbird, Apple Mail, Gmail, Samsung apps and DAVx5.
 - **Apple and Thunderbird.** One-tap `.mobileconfig` profile (no password) and Thunderbird autoconfig.
 - **Phone handoff.** QR code on a computer to continue on a phone.
 - **Admin area.** Internal `/support` (sign-in with a session limited to `/support`): setup assistant, every setting, logo and background upload, server test, and a link generator for one customer with a QR code (PNG or SVG).

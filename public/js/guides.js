@@ -18,8 +18,8 @@ export const DEVICES = [
 export const APPS = {
   windows: ['outlook-new', 'outlook-classic', 'caldavsync', 'thunderbird'],
   macos: ['mac-profile', 'mac-manual', 'thunderbird'],
-  ios: ['ios-profile', 'ios-manual'],
-  android: ['gmail', 'samsung', 'davx5'],
+  ios: ['ios-profile', 'ios-manual', 'outlook-mobile'],
+  android: ['gmail', 'samsung', 'outlook-mobile', 'davx5'],
 };
 
 const THUNDERBIRD = {
@@ -378,6 +378,31 @@ export const GUIDES = {
     next: { guide: 'davx5', t: 'Calendrier et contacts sur Android', d: 'Installez DAVx⁵ pour synchroniser votre agenda et vos contacts.' },
   },
 
+  'outlook-mobile': {
+    id: 'outlook-mobile',
+    name: 'Outlook mobile',
+    desc: 'L’app Outlook de Microsoft pour iPhone, iPad et Android.',
+    icon: 'outlook',
+    covers: ['mail'],
+    intro: 'L’app Outlook (gratuite sur l’App Store et le Google Play Store) relève votre boîte {brand} en IMAP. Elle ne synchronise pas l’agenda ni les contacts de ce type de compte : sur Android, ajoutez ensuite DAVx⁵ ; sur iPhone, utilisez le profil de configuration ou la configuration manuelle pour l’agenda et les contacts.',
+    sections: [
+      {
+        service: 'mail',
+        title: 'Ajouter le compte e-mail',
+        steps: [
+          { t: 'Installez [[Microsoft Outlook]] depuis l’App Store (iPhone, iPad) ou le Google Play Store (Android), puis ouvrez-le.' },
+          { t: 'Au premier lancement, touchez [[Ajouter un compte]]. Si Outlook est déjà configuré : touchez votre photo de profil en haut à gauche, puis l’icône [[+]] (ou [[Paramètres]] › [[Ajouter un compte de messagerie]]).' },
+          { t: 'Saisissez votre adresse e-mail et touchez [[Continuer]]. Si Outlook propose un compte Google ou Microsoft, ignorez la proposition.', f: ['email'] },
+          { t: 'Outlook demande le type de compte : choisissez [[IMAP]]. S’il ne le demande pas, touchez [[Configurer le compte manuellement]] puis [[IMAP]].' },
+          { t: 'Activez [[Utiliser les paramètres avancés]]. Indiquez votre adresse, votre nom affiché et une description (par exemple {brand}).', f: ['email', 'name'] },
+          { t: 'Serveur de courrier entrant (IMAP) : renseignez le serveur, le port et la sécurité, puis votre nom d’utilisateur et votre mot de passe.', f: ['imapHost', 'imapPort', 'imapSec', 'username', 'password'] },
+          { t: 'Serveur de courrier sortant (SMTP) : renseignez le serveur, le port et la sécurité, avec les mêmes identifiants qu’en réception.', f: ['smtpHost', 'smtpPort', 'smtpSec', 'username', 'password'] },
+          { t: 'Touchez [[Se connecter]] (ou la coche en haut à droite). Votre boîte de réception apparaît après quelques secondes.' },
+        ],
+      },
+    ],
+    next: { guide: 'davx5', t: 'Calendrier et contacts sur Android', d: 'Installez DAVx⁵ pour synchroniser votre agenda et vos contacts.' },
+  },
   davx5: {
     id: 'davx5',
     name: 'DAVx⁵',
