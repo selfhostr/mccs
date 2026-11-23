@@ -516,13 +516,26 @@ main { flex: 1 0 auto; }
 .faq-body { padding: 0 0 6px; color: var(--muted); font-size: .86rem; }
 .faq-body strong { color: var(--text); }
 
-/* ===== Pied de page (une ligne) ===== */
-.site-footer { border-top: 1px solid var(--border); background: var(--surface); padding: 16px 0 calc(16px + env(safe-area-inset-bottom)); color: var(--muted); font-size: .78rem; }
-.footer-inner { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px 18px; }
-.footer-inner > span { display: inline-flex; align-items: center; min-height: 40px; }
-.site-footer a { color: var(--muted); text-decoration: none; }
+/* ===== Pied de page (une ligne, compact) ===== */
+.site-footer { flex: none; border-top: 1px solid var(--border); background: var(--surface); padding: 4px 0 calc(4px + env(safe-area-inset-bottom)); color: var(--muted); font-size: .8rem; }
+.footer-inner { display: flex; flex-direction: column; align-items: center; gap: 0; text-align: center; }
+.footer-inner > span { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; column-gap: 20px; min-height: 28px; }
+.footer-org { color: var(--text); font-weight: 600; }
+.footer-org:empty { display: none; }
+.footer-contact { gap: 0 20px; }
+.footer-contact:not(:has(a:not([hidden]))) { display: none; }
+.site-footer a { color: var(--muted); text-decoration: none; gap: 7px; }
+.site-footer a svg { width: 15px; height: 15px; flex: none; color: var(--dim); transition: color .2s; }
 .site-footer a:hover { color: var(--text); text-decoration: underline; }
-@media (max-width: 599px) { .footer-note { display: none; } }
+.site-footer a:hover svg { color: var(--accent-text); }
+.footer-note { color: var(--dim); }
+@media (min-width: 760px) {
+  .footer-inner { flex-direction: row; justify-content: flex-start; gap: 0 24px; text-align: left; }
+  .footer-inner > .footer-contact { flex: 1; justify-content: flex-start; }
+  .footer-inner > span { min-height: 40px; }
+  .footer-org + .footer-contact::before { content: ""; width: 1px; height: 16px; background: var(--border-2); margin-right: 4px; }
+  .footer-note { margin-left: auto; }
+}
 
 /* ===== Divers ===== */
 .toast {

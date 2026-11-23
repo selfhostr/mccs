@@ -512,8 +512,8 @@ function applyConfigToStatic() {
   document.querySelectorAll('.js-imap-host').forEach((e) => { e.textContent = c.imap.host; });
   document.querySelectorAll('.js-smtp').forEach((e) => { e.textContent = `${c.smtp.host}, port ${c.smtp.port}, ${c.smtp.security}`; });
   document.querySelectorAll('.js-dav-discovery').forEach((e) => { e.textContent = c.davDiscoveryUrl; });
-  document.querySelectorAll('.js-support-phone').forEach((a) => { a.href = tel; a.textContent = sup.phone || ''; show(a, !!sup.phone); });
-  document.querySelectorAll('.js-support-email').forEach((a) => { a.href = 'mailto:' + (sup.email || ''); a.textContent = sup.email || ''; show(a, !!sup.email); });
+  document.querySelectorAll('.js-support-phone').forEach((a) => { a.href = tel; (a.querySelector('.t') || a).textContent = sup.phone || ''; show(a, !!sup.phone); });
+  document.querySelectorAll('.js-support-email').forEach((a) => { a.href = 'mailto:' + (sup.email || ''); (a.querySelector('.t') || a).textContent = sup.email || ''; show(a, !!sup.email); });
   const phone = $('#support-phone');
   if (phone) { phone.href = tel; phone.querySelector('span').textContent = sup.phone || ''; show(phone, !!sup.phone); }
   const mail = $('#support-email');
