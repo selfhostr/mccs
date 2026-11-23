@@ -29,7 +29,7 @@ The logs print the sign-in for the admin area (user `support`, a generated passw
 - **Apple and Thunderbird.** One-tap `.mobileconfig` profile (no password) and Thunderbird autoconfig.
 - **Phone handoff.** QR code on a computer to continue on a phone.
 - **Admin area.** Internal `/support` (sign-in with a session limited to `/support`): setup assistant, every setting, logo and background upload, server test, and a link generator for one customer with a QR code (PNG or SVG).
-- **White-label.** Name, logo, accent colour, servers and support contact come from environment variables.
+- **White-label.** Name, logo, colours, background, servers and support contact, all set from `/support`.
 - **Any CalDAV/CardDAV server.** The admin detects the calendar and contacts addresses itself (DNS `SRV`, then `.well-known`, as clients do) and recognises MDaemon; every URL can still be overridden.
 - **Light and dark.** Follows the system, mobile friendly, strict Content-Security-Policy.
 
