@@ -4,11 +4,11 @@ At the end the wizard carries your name, logo and colour, and your own guide wor
 
 ## Branding
 
-Name, logo, accent colour and support contact are environment variables; see [Configuration](configuration.md). The theme follows the system (dark or light), uses Inter (text) and JetBrains Mono (code and identifiers), both self-hosted, and a single accent colour. `public/css/app.css` defines the design tokens on `:root` and is also used by `/support`. The accent is set by the generated `/brand.css`, so no inline style is needed and the CSP keeps `style-src 'self'`.
+Name, logo, accent colour, page background and support contact are environment variables, and can be overridden by saved settings; see [Configuration](configuration.md). The theme follows the system (dark or light), uses Inter (text) and JetBrains Mono (code and identifiers), both self-hosted, and a single accent colour. `public/css/app.css` defines the design tokens on `:root` and is also used by `/support`. The accent is set by the generated `/brand.css`, so no inline style is needed and the CSP keeps `style-src 'self'`.
 
 ## Guides
 
-Guides are defined in `public/js/guides.js`: devices (`windows`, `macos`, `ios`, `android`), the apps offered per device, and the steps of each guide (ids such as `ios-profile`, `ios-manual`, `mac-profile`, `mac-manual`, `outlook-new`, `outlook-classic`, `caldavsync`, `thunderbird`, `gmail`, `samsung`, `davx5`).
+Guides are defined in `public/js/guides.js`: devices (`windows`, `macos`, `ios`, `android`), the apps offered per device, and the steps of each guide (ids such as `ios-profile`, `ios-manual`, `mac-profile`, `mac-manual`, `outlook-new`, `outlook-classic`, `caldavsync`, `thunderbird`, `gmail`, `samsung`, `outlook-mobile`, `davx5`).
 
 Mini syntax used in step texts:
 
@@ -23,7 +23,7 @@ Mini syntax used in step texts:
 | `dl: true` | Download button for the Apple profile |
 | `sub: '...'` | Secondary explanatory text |
 | `shot: 'folder/file.png'` | Optional screenshot |
-| `'[mdaemon] ...'` | Tip prefix: shown only with `DAV_PRESET=mdaemon` |
+| `'[mdaemon] ...'` | Tip prefix: shown only when the server type is MDaemon (`DAV_PRESET=mdaemon`, the default or detected) |
 
 Copyable values (`f:` and `{F:}`) are defined by `fieldDefs()` in `public/js/app.js`.
 
@@ -31,7 +31,7 @@ Copyable values (`f:` and `{F:}`) are defined by `fieldDefs()` in `public/js/app
 
 1. Add `shot: 'folder/file.png'` (and optionally `shotCaption`) to a step.
 2. Put the image in `public/img/guides/` (PNG recommended, 1200 to 1600 px wide, no real personal data).
-3. Rebuild: `docker compose up -d --build`.
+3. Rebuild the image from a checkout: `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build`. The published image does not contain your changes.
 
 The "Voir une capture" link appears only when the file exists; the list is built at startup. `public/img/guides/README.md` lists the expected files.
 

@@ -2,11 +2,19 @@
 
 ## The wizard shows `mail.example.com`
 
-`MAIL_HOST` is not set, or `.env` is not next to `docker-compose.yml`. Fix it and run `docker compose up -d`. Check `/api/config` to see what the browser receives.
+`MAIL_HOST` is not set yet. Set the mail servers in `/support` (Settings, or rerun the assistant). Check `/api/config` to see what the browser receives.
 
 ## `/support` answers 404
 
-`SUPPORT_PASSWORD` is empty. Set it and restart.
+`/data` is not writable (is the `mccs-data` volume mounted?) and `SUPPORT_PASSWORD` is not set, so there is nowhere to keep a password. Mount a writable volume on `/data`, or set `SUPPORT_PASSWORD`, then restart.
+
+## I forgot the admin password
+
+Run `docker compose exec mccs rm /data/admin.json && docker compose restart mccs && docker compose logs mccs`: a new password is generated and printed (if `SUPPORT_PASSWORD` is set, it works again instead).
+
+## Sign-in succeeds but the sign-in page comes back
+
+The browser dropped the session cookie because it is marked `Secure` while you use plain HTTP. Use HTTPS, or set `PUBLIC_URL` to the `http://` address you use.
 
 ## `/support` answers 429
 
@@ -14,7 +22,7 @@ Ten failed sign-ins from one address lock it for 15 minutes. Wait, or restart th
 
 ## The accent colour does not change
 
-`BRAND_ACCENT` must be `#rgb` or `#rrggbb`; anything else falls back to the neutral accent.
+`BRAND_ACCENT` must be `#rgb` or `#rrggbb`; anything else falls back to the default ink-blue accent.
 
 ## My logo does not appear
 

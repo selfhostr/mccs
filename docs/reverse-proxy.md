@@ -30,11 +30,11 @@ server {
 Set `PUBLIC_URL` to the same address.
 
 !!! warning
-    The `/support` rate limiter keys on the `CF-Connecting-IP` header when present, otherwise on the socket address. Only expose the app through a proxy that sets or strips this header, otherwise clients can spoof it. Behind a plain proxy, all clients may share one address, so the lock applies to everyone.
+    The `/support` rate limiter, and the per-IP limit of the optional password check (`/api/test`), key on the connection's address by default. Behind a proxy, set `TRUSTED_PROXY_HEADER` to the header your proxy sets: `CF-Connecting-IP` behind Cloudflare, or `X-Forwarded-For` behind nginx or Caddy (only the last address, the one added by your proxy, is used). Never set it when clients can reach the app directly: they could then spoof the header. Without it, all clients behind the proxy share one address, so the lock applies to everyone.
 
 ## Caching
 
-At startup a hash of all CSS and JS files (and `/brand.css`) is computed and injected as `?v=<hash>` into asset URLs in the HTML and into JS imports. Versioned assets are served as immutable for one year; HTML is `no-cache`. A restart with changed assets therefore invalidates browser caches automatically.
+At startup a hash of all CSS and JS files is computed and injected as `?v=<hash>` into asset URLs in the HTML and into JS imports. Versioned assets are served as immutable for one year; HTML is `no-cache`. A restart with changed assets therefore invalidates browser caches automatically. `/brand.css` follows the saved settings, so it is never versioned and always served `no-cache`: do not cache it longer in your proxy.
 
 ## Autoconfig for Thunderbird
 

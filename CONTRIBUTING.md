@@ -8,19 +8,18 @@ Everything runs in Docker, with no toolchain on your machine.
 
 ```bash
 git clone https://github.com/selfhostr/mccs.git && cd mccs
-cp .env.example .env
-docker compose up -d --build
+docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build
 ```
 
-Open http://localhost:8080. Code or guide changes need `--build`; environment changes only need `docker compose up -d`.
+Open http://localhost:8080. Code or guide changes need `--build`. A local `docker-compose.override.yml` is ignored by git. The admin password is printed by `docker compose logs mccs`.
 
 ## Checks
 
-CI syntax-checks the scripts and smoke-tests the Docker image; there is no other automated test suite. Before you open a pull request, check by hand:
+CI syntax-checks the scripts, runs the unit tests (`npm test`) and smoke-tests the Docker image. Before you open a pull request, check by hand:
 
 - the wizard from address to a guide, on a desktop and at 390 px wide, with no horizontal scroll;
 - dark and light, and keyboard only;
-- `/support` with `SUPPORT_PASSWORD` set;
+- `/support`: first start (generated password in the logs) and the settings;
 - nothing external is requested: the CSP forbids inline scripts, inline styles and third-party hosts.
 
 ## Conventions
@@ -29,7 +28,7 @@ CI syntax-checks the scripts and smoke-tests the Docker image; there is no other
 - Colours come from the tokens in `public/css/app.css`, no hex in components. Status is never conveyed by colour alone.
 - Guide texts use the mini syntax described in [docs/customize.md](docs/customize.md).
 - The interface is in French. Keep it plain and in the formal register.
-- No instance data in the code: everything goes through environment variables.
+- No instance data in the code: everything goes through the settings saved from `/support` or environment variables.
 
 ## Branches and commits
 

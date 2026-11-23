@@ -2,7 +2,7 @@
 
 mccs stands for Mail, Calendar, Contacts Setup.
 
-mccs is a web page you host for the customers of your mail service. They type their address, pick a device and get a short guide with every value ready to copy: mail (IMAP and SMTP), calendar (CalDAV) and contacts (CardDAV) on Windows, macOS, iPhone, iPad and Android. It never asks for a password and stores nothing.
+mccs is a web page you host for the customers of your mail service. They type their address, pick a device and get a short guide with every value ready to copy: mail (IMAP and SMTP), calendar (CalDAV) and contacts (CardDAV) on Windows, macOS, iPhone, iPad and Android. By default it never asks for a password and stores nothing; you can turn on an optional password check (see [Security](security.md#optional-password-check)).
 
 Start here:
 

@@ -1,6 +1,6 @@
-# MDaemon preset
+# MDaemon
 
-`DAV_PRESET=mdaemon` is the default. It builds the WebDAV paths used by MDaemon from `DAV_BASE_URL` (`https://MAIL_HOST` by default).
+The admin's automatic detection (see [Configuration](configuration.md#automatic-detection)) recognises MDaemon by its `Server` or `WWW-Authenticate` header, or by its `/webdav/` paths, and sets `DAV_PRESET=mdaemon`. That value is also the default when nothing is set, so an existing configuration without `DAV_PRESET` keeps exactly the same URLs. The preset builds the WebDAV paths used by MDaemon from `DAV_BASE_URL` (`https://MAIL_HOST` by default); the detection only changes `DAV_BASE_URL` when MDaemon answers on another host.
 
 ## URLs
 
@@ -21,7 +21,7 @@ The `b64=` segments are base64 of the folder names `Calendar`, `Tasks` and `Cont
 - Login is the full email address everywhere (IMAP, SMTP, DAV).
 - Shared "[Public]" calendars, tasks and contacts appear automatically on Apple devices and DAVx5. For Outlook (CalDAV Synchronizer) and Thunderbird, use the discovery URL.
 - A new account only has the INBOX and Spam folders; other folders are created by the mail client.
-- Tips prefixed `[mdaemon] ` in `guides.js` and the FAQ entry marked `data-preset="mdaemon"` in `index.html` are shown only with this preset.
+- Tips prefixed `[mdaemon] ` in `guides.js` and the FAQ entry marked `data-preset="mdaemon"` in `index.html` are shown only with this server type.
 
 ## Overriding
 
@@ -29,4 +29,4 @@ Any URL can be replaced individually, for example `DAV_CALENDAR_URL_TEMPLATE`. T
 
 ## Other servers
 
-Set `DAV_PRESET=generic` to fall back to `.well-known` discovery for every DAV URL, then override what your server needs. See [configuration.md](configuration.md).
+Any other CalDAV/CardDAV server is detected as `generic`: the calendar and contacts URLs become the discovery URLs found on the server. Without the admin, set `DAV_PRESET=generic` (and, if needed, `DAV_DISCOVERY_URL` and `DAV_CARD_DISCOVERY_URL`). See [Configuration](configuration.md).

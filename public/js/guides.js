@@ -10,23 +10,23 @@
 
 export const DEVICES = [
   { id: 'windows', name: 'Windows', desc: 'PC avec Outlook ou Thunderbird', icon: 'windows' },
-  { id: 'macos', name: 'macOS', desc: 'Mac avec Mail, Calendrier, Contacts', icon: 'mac' },
-  { id: 'ios', name: 'iPhone / iPad', desc: 'iOS et iPadOS', icon: 'iphone' },
-  { id: 'android', name: 'Android', desc: 'Samsung, Google Pixel, etc.', icon: 'android' },
+  { id: 'macos', name: 'macOS', desc: 'Mac avec Mail, Calendrier, Contacts', icon: 'macos' },
+  { id: 'ios', name: 'iPhone / iPad', desc: 'iOS et iPadOS', icon: 'ios' },
+  { id: 'android', name: 'Android', desc: 'Samsung, Google Pixel, etc.', icon: 'androidlogo' },
 ];
 
 export const APPS = {
   windows: ['outlook-new', 'outlook-classic', 'caldavsync', 'thunderbird'],
   macos: ['mac-profile', 'mac-manual', 'thunderbird'],
-  ios: ['ios-profile', 'ios-manual'],
-  android: ['gmail', 'samsung', 'davx5'],
+  ios: ['ios-profile', 'ios-manual', 'outlook-mobile'],
+  android: ['gmail', 'samsung', 'outlook-mobile', 'davx5'],
 };
 
 const THUNDERBIRD = {
   id: 'thunderbird',
   name: 'Thunderbird',
   desc: 'Gratuit, gère mail, agenda et contacts sans module à ajouter.',
-  icon: 'bird',
+  icon: 'thunderbird',
   covers: ['mail', 'calendar', 'contacts'],
   intro: 'Thunderbird (version 128 ou plus récente, Windows et macOS) gère nativement la messagerie, les agendas CalDAV et les carnets d’adresses CardDAV.',
   sections: [
@@ -192,7 +192,7 @@ export const GUIDES = {
     id: 'mac-profile',
     name: 'Profil en un clic',
     desc: 'Mail, Calendrier et Contacts configurés automatiquement.',
-    icon: 'profile',
+    icon: 'appleprofile',
     covers: ['mail', 'calendar', 'contacts'],
     recommended: true,
     profile: true,
@@ -218,7 +218,7 @@ export const GUIDES = {
     id: 'mac-manual',
     name: 'Apple Mail, Calendrier et Contacts',
     desc: 'Configuration manuelle dans les apps Apple.',
-    icon: 'mac',
+    icon: 'apple',
     covers: ['mail', 'calendar', 'contacts'],
     intro: 'Méthode manuelle, utile si vous ne pouvez pas installer de profil. Les libellés correspondent à macOS Sonoma, Sequoia et Tahoe.',
     sections: [
@@ -259,7 +259,7 @@ export const GUIDES = {
     id: 'ios-profile',
     name: 'Profil en un clic',
     desc: 'Mail, Calendrier et Contacts installés en moins d’une minute.',
-    icon: 'profile',
+    icon: 'appleprofile',
     covers: ['mail', 'calendar', 'contacts'],
     recommended: true,
     profile: true,
@@ -290,7 +290,7 @@ export const GUIDES = {
     id: 'ios-manual',
     name: 'Configuration manuelle',
     desc: 'Dans Réglages, compte par compte.',
-    icon: 'gear',
+    icon: 'apple',
     covers: ['mail', 'calendar', 'contacts'],
     intro: 'Méthode manuelle, pour iOS et iPadOS 18 ou plus récent. Sur iOS 17 et antérieur, les réglages se trouvent directement dans [[Réglages]] › [[Mail]] (sans passer par [[Apps]]).',
     sections: [
@@ -335,7 +335,7 @@ export const GUIDES = {
     id: 'gmail',
     name: 'Gmail',
     desc: 'L’app de messagerie installée sur la plupart des Android.',
-    icon: 'mail',
+    icon: 'gmail',
     covers: ['mail'],
     intro: 'L’app Gmail sait relever n’importe quelle boîte IMAP. Pour le calendrier et les contacts, ajoutez ensuite DAVx⁵.',
     sections: [
@@ -359,7 +359,7 @@ export const GUIDES = {
     id: 'samsung',
     name: 'Samsung Email',
     desc: 'L’app de messagerie des smartphones Samsung Galaxy.',
-    icon: 'mail',
+    icon: 'samsung',
     covers: ['mail'],
     intro: 'Pour les smartphones Samsung Galaxy (One UI). Pour le calendrier et les contacts, ajoutez ensuite DAVx⁵.',
     sections: [
@@ -378,6 +378,31 @@ export const GUIDES = {
     next: { guide: 'davx5', t: 'Calendrier et contacts sur Android', d: 'Installez DAVx⁵ pour synchroniser votre agenda et vos contacts.' },
   },
 
+  'outlook-mobile': {
+    id: 'outlook-mobile',
+    name: 'Outlook mobile',
+    desc: 'L’app Outlook de Microsoft pour iPhone, iPad et Android.',
+    icon: 'outlook',
+    covers: ['mail'],
+    intro: 'L’app Outlook (gratuite sur l’App Store et le Google Play Store) relève votre boîte {brand} en IMAP. Elle ne synchronise pas l’agenda ni les contacts de ce type de compte : sur Android, ajoutez ensuite DAVx⁵ ; sur iPhone, utilisez le profil de configuration ou la configuration manuelle pour l’agenda et les contacts.',
+    sections: [
+      {
+        service: 'mail',
+        title: 'Ajouter le compte e-mail',
+        steps: [
+          { t: 'Installez [[Microsoft Outlook]] depuis l’App Store (iPhone, iPad) ou le Google Play Store (Android), puis ouvrez-le.' },
+          { t: 'Au premier lancement, touchez [[Ajouter un compte]]. Si Outlook est déjà configuré : touchez votre photo de profil en haut à gauche, puis l’icône [[+]] (ou [[Paramètres]] › [[Ajouter un compte de messagerie]]).' },
+          { t: 'Saisissez votre adresse e-mail et touchez [[Continuer]]. Si Outlook propose un compte Google ou Microsoft, ignorez la proposition.', f: ['email'] },
+          { t: 'Outlook demande le type de compte : choisissez [[IMAP]]. S’il ne le demande pas, touchez [[Configurer le compte manuellement]] puis [[IMAP]].' },
+          { t: 'Activez [[Utiliser les paramètres avancés]]. Indiquez votre adresse, votre nom affiché et une description (par exemple {brand}).', f: ['email', 'name'] },
+          { t: 'Serveur de courrier entrant (IMAP) : renseignez le serveur, le port et la sécurité, puis votre nom d’utilisateur et votre mot de passe.', f: ['imapHost', 'imapPort', 'imapSec', 'username', 'password'] },
+          { t: 'Serveur de courrier sortant (SMTP) : renseignez le serveur, le port et la sécurité, avec les mêmes identifiants qu’en réception.', f: ['smtpHost', 'smtpPort', 'smtpSec', 'username', 'password'] },
+          { t: 'Touchez [[Se connecter]] (ou la coche en haut à droite). Votre boîte de réception apparaît après quelques secondes.' },
+        ],
+      },
+    ],
+    next: { guide: 'davx5', t: 'Calendrier et contacts sur Android', d: 'Installez DAVx⁵ pour synchroniser votre agenda et vos contacts.' },
+  },
   davx5: {
     id: 'davx5',
     name: 'DAVx⁵',
@@ -390,7 +415,10 @@ export const GUIDES = {
         service: 'all',
         title: 'Installer DAVx⁵',
         steps: [
-          { t: 'Installez DAVx⁵ depuis <a href="{L:davx5Fdroid}" rel="noopener">F-Droid</a> (gratuit) ou le <a href="{L:davx5Play}" rel="noopener">Google Play Store</a> (payant, soutient les développeurs). L’APK est aussi disponible sur <a href="{L:davx5Github}" rel="noopener">GitHub</a>.' },
+          { t: 'Sur votre téléphone, ouvrez la <a href="{L:davx5Github}" rel="noopener">page de téléchargement de DAVx⁵ sur GitHub</a>.', sub: 'C’est gratuit. DAVx⁵ existe aussi sur le Google Play Store (payant, soutient les développeurs).' },
+          { t: 'Prenez la version stable : celle marquée [[Latest]] avec une étiquette <strong>verte</strong>. N’installez pas celles marquées [[Pre-release]] (étiquette orange), qui sont des versions de test.' },
+          { t: 'Sous cette version, ouvrez [[Assets]] et touchez le fichier qui se termine par <strong>.apk</strong> pour le télécharger.' },
+          { t: 'Ouvrez le fichier téléchargé et touchez [[Installer]]. Si Android le demande, autorisez l’installation depuis votre navigateur ([[Paramètres]] › [[Autoriser cette source]]), puis revenez en arrière et touchez [[Installer]].' },
         ],
       },
       {

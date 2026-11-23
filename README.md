@@ -10,41 +10,41 @@
 
 ## Overview
 
-`mccs` (Mail, Calendar, Contacts Setup) is a web page you host for the customers of your mail service. They type their address, pick Windows, macOS, iPhone, iPad or Android, and get a short guide with every value ready to copy. It never asks for a password, stores nothing and sets no cookies. Free, for good: MIT licence, no paid edition.
+`mccs` (Mail, Calendar, Contacts Setup) is a web page you host for the customers of your mail service. They type their address, pick Windows, macOS, iPhone, iPad or Android, and get a short guide with every value ready to copy. By default it never asks for a password; an optional check (off by default) lets customers verify their password before setup, without storing it. It stores nothing and sets no cookies. Free, for good: MIT licence, no paid edition.
 
 ## Quick start
 
 ```bash
-git clone https://github.com/selfhostr/mccs.git && cd mccs
-cp .env.example .env      # set MAIL_HOST, PUBLIC_URL, BRAND_NAME
-docker compose up -d --build
+curl -O https://raw.githubusercontent.com/selfhostr/mccs/main/docker-compose.yml
+docker compose up -d
+docker compose logs mccs
 ```
 
-Open http://localhost:8080 and try the wizard with an address on your domain. Nothing is stored on disk, so back up only your `.env`. For production, put it behind an HTTPS reverse proxy: see [docs/reverse-proxy.md](docs/reverse-proxy.md) and [docs/install.md](docs/install.md).
+The logs print the sign-in for the admin area (user `support`, a generated password) and its address. Open `http://<your-server>:8080/support`: the setup assistant sets your mail servers, calendar, contacts, brand and support contact, all from the browser. Settings are saved in the `mccs-data` volume: back it up. For production, put it behind an HTTPS reverse proxy: see [docs/reverse-proxy.md](docs/reverse-proxy.md) and [docs/install.md](docs/install.md).
 
 ## Features
 
 - **Guided wizard.** Address, device, app, then a step-by-step guide with copyable values.
-- **Many apps.** Outlook (new and classic), CalDAV Synchronizer, Thunderbird, Apple Mail, Gmail, Samsung apps and DAVx5.
+- **Many apps.** Outlook (new, classic and mobile for iPhone and Android), CalDAV Synchronizer, Thunderbird, Apple Mail, Gmail, Samsung apps and DAVx5.
 - **Apple and Thunderbird.** One-tap `.mobileconfig` profile (no password) and Thunderbird autoconfig.
 - **Phone handoff.** QR code on a computer to continue on a phone.
-- **Support page.** Internal `/support` (HTTP Basic) builds a link for one customer, with QR code and a ready-made email or SMS text.
-- **White-label.** Name, logo, accent colour, servers and support contact come from environment variables.
-- **Presets.** `mdaemon` (default) or `generic` (standard `.well-known` discovery), with URL templates to override either.
+- **Admin area.** Internal `/support` (sign-in with a session limited to `/support`): setup assistant, every setting, logo and background upload, server test, and a link generator for one customer with a QR code (PNG or SVG).
+- **White-label.** Name, logo, colours, background, servers and support contact, all set from `/support`.
+- **Any CalDAV/CardDAV server.** The admin detects the calendar and contacts addresses itself (DNS `SRV`, then `.well-known`, as clients do) and recognises MDaemon; every URL can still be overridden.
 - **Light and dark.** Follows the system, mobile friendly, strict Content-Security-Policy.
 
 ## Architecture
 
-One Node 22 process using only the built-in `http` module, with no npm dependency. The front end is plain HTML, CSS and JavaScript served from memory, and reads its settings from `/api/config`. Everything comes from environment variables, in a read-only container running as a non-root user. See [docs/](docs/index.md).
+One Node 22 process using only the built-in `http` module, with no npm dependency. The front end is plain HTML, CSS and JavaScript served from memory, and reads its settings from `/api/config`. Settings come from environment variables and from `/data/config.json` (a Docker volume), in a read-only container running as a non-root user. See [docs/](docs/index.md).
 
 ## Limits
 
 - The interface and the guides are in French; translating means editing `public/js/guides.js`, `public/js/app.js` and the HTML files.
 - The Apple profile is not signed, so iOS and macOS show "Not signed" when installing it.
 - The guides describe third-party apps as they look today; a new app version can make a step out of date.
-- It does not check that your mail server answers, and the `generic` preset has had less use than `mdaemon`.
-- The `/support` lock-out keys on the `CF-Connecting-IP` header, so only expose the app behind a proxy that controls it.
-- Early: variable names and endpoints can still change before 1.0. No published image, no automated tests and no CI yet.
+- The detection works without credentials, so it finds each server's discovery address, not each customer's personal calendar URL; the apps find the rest. MDaemon has had the most use; other servers have been checked against public providers only.
+- Behind a reverse proxy, set `TRUSTED_PROXY_HEADER` (`CF-Connecting-IP` or `X-Forwarded-For`) so the `/support` lock-out sees real client addresses; otherwise all clients share the proxy's address.
+- Early: variable names and endpoints can still change before 1.0. No published image yet.
 
 ## Contributing
 

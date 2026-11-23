@@ -5,10 +5,12 @@ const fs = require('fs');
 const path = require('path');
 const zlib = require('zlib');
 const crypto = require('crypto');
-const { config, publicConfig } = require('./config');
+const { config, settings, publicConfig, DATA_DIR } = require('./config');
 const { normalizeEmail, normalizeName } = require('./validate');
 const { buildProfile, parseServices } = require('./mobileconfig');
 const { buildAutoconfig } = require('./autoconfig');
+const { createAdmin } = require('./admin');
+const { createConnectionTest } = require('./connection-test');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
@@ -28,24 +30,25 @@ const TYPES = {
   '.webmanifest': 'application/manifest+json',
 };
 
-// Logo externe (BRAND_LOGO_URL absolue) : seule son origine est ajoutée à img-src.
-const LOGO_ORIGIN = /^https?:\/\//.test(config.brandLogoUrl) ? ' ' + new URL(config.brandLogoUrl).origin : '';
-
-const CSP = [
-  "default-src 'none'",
-  "script-src 'self'",
-  "style-src 'self'",
-  "img-src 'self' data:" + LOGO_ORIGIN,
-  "font-src 'self'",
-  "connect-src 'self'",
-  "manifest-src 'self'",
-  "base-uri 'none'",
-  "form-action 'self'",
-  "frame-ancestors 'none'",
-].join('; ');
+// CSP : recalculée à chaque changement de réglages (logo externe : seule son origine est ajoutée à img-src).
+function buildCsp() {
+  const logoOrigin = /^https?:\/\//.test(config.brandLogoUrl) ? ' ' + new URL(config.brandLogoUrl).origin : '';
+  return [
+    "default-src 'none'",
+    "script-src 'self'",
+    "style-src 'self'",
+    "img-src 'self' data:" + logoOrigin,
+    "font-src 'self'",
+    "connect-src 'self'",
+    "manifest-src 'self'",
+    "base-uri 'none'",
+    "form-action 'self'",
+    "frame-ancestors 'none'",
+  ].join('; ');
+}
 
 const SECURITY_HEADERS = {
-  'Content-Security-Policy': CSP,
+  'Content-Security-Policy': '',
   'X-Content-Type-Options': 'nosniff',
   'X-Frame-Options': 'DENY',
   'Referrer-Policy': 'no-referrer',
@@ -70,14 +73,6 @@ const files = new Map();
   }
 })(PUBLIC_DIR, '');
 
-// Feuille générée : couleur d'accent (BRAND_ACCENT). Fichier séparé plutôt qu'un style inline,
-// pour respecter la CSP (style-src 'self'). Incluse dans le hash de cache-busting ci-dessous.
-{
-  // Sans BRAND_ACCENT : accent neutre défini par app.css (#e5e5e5 sombre, #404040 clair).
-  const body = Buffer.from(config.brandAccent ? `:root { --accent: ${config.brandAccent}; --accent-on: #ffffff; }\n` : ':root {}\n');
-  files.set('/brand.css', { body, gz: zlib.gzipSync(body, { level: 9 }), type: TYPES['.css'], ext: '.css' });
-}
-
 // Cache-busting : un hash du contenu de tous les CSS/JS est injecté (?v=…) dans les URL des assets
 // du HTML et dans les imports des modules JS. Les URL versionnées sont servies en immutable.
 const BUILD = (() => {
@@ -89,7 +84,8 @@ const withV = (u) => u + '?v=' + BUILD;
 for (const [u, f] of files) {
   let txt;
   if (f.ext === '.html') {
-    txt = f.body.toString('utf8').replace(/((?:href|src)=")(\/[^"?#]+\.(?:css|js))(")/g, (m, a, b, c) => a + withV(b) + c);
+    // /brand.css change avec les réglages : jamais versionné (servi en no-cache).
+    txt = f.body.toString('utf8').replace(/((?:href|src)=")(\/[^"?#]+\.(?:css|js))(")/g, (m, a, b, c) => (b === '/brand.css' ? m : a + withV(b) + c));
   } else if (f.ext === '.js') {
     txt = f.body.toString('utf8').replace(/(\bfrom\s*')([^'?]+\.js)(')/g, (m, a, b, c) => a + withV(b) + c);
   } else continue;
@@ -103,59 +99,28 @@ const GUIDE_SHOTS = [...files.keys()]
   .filter((u) => u.startsWith('/img/guides/') && /\.(png|jpe?g|webp)$/i.test(u))
   .map((u) => u.slice('/img/guides/'.length))
   .sort();
-const configJson = Buffer.from(JSON.stringify(Object.assign(publicConfig(), { shots: GUIDE_SHOTS })));
-
-/* ---------- Page interne /support (HTTP Basic) ---------- */
-const SUPPORT_ENABLED = config.supportAuth.password !== '';
-const sha = (s) => crypto.createHash('sha256').update(String(s), 'utf8').digest();
-const SUPPORT_USER_H = sha(config.supportAuth.user);
-const SUPPORT_PASS_H = sha(config.supportAuth.password);
-const failures = new Map(); // ip -> { n, until }
-const MAX_FAILURES = 10;
-const LOCK_MS = 15 * 60 * 1000;
-
-function clientIp(req) {
-  return String(req.headers['cf-connecting-ip'] || req.socket.remoteAddress || '');
+// Feuille de marque générée (accent, fond de page) : fichier séparé plutôt qu'un style inline,
+// pour respecter la CSP (style-src 'self').
+function brandCss() {
+  const rules = [];
+  if (config.brandAccent) rules.push(`--accent: ${config.brandAccent};`, '--accent-on: #ffffff;');
+  const bg = config.brandBackground;
+  if (/^#[0-9a-f]+,#[0-9a-f]+$/i.test(bg)) { const [a, b] = bg.split(','); rules.push(`--brand-bg: linear-gradient(160deg, ${a}, ${b});`); }
+  else if (bg.startsWith('#')) rules.push(`--brand-bg: ${bg};`);
+  else if (bg.startsWith('/uploads/')) rules.push(`--brand-bg: center / cover no-repeat url("${bg}"), var(--bg);`);
+  return `:root { ${rules.join(' ')} }\n`;
 }
 
-// Comparaison en temps constant (empreintes de même longueur, les deux toujours évaluées).
-function checkBasic(header) {
-  const m = /^Basic\s+([A-Za-z0-9+/=]+)\s*$/i.exec(header || '');
-  let user = '', pass = '';
-  if (m) {
-    const dec = Buffer.from(m[1], 'base64').toString('utf8');
-    const i = dec.indexOf(':');
-    if (i >= 0) { user = dec.slice(0, i); pass = dec.slice(i + 1); }
-  }
-  const okUser = crypto.timingSafeEqual(sha(user), SUPPORT_USER_H);
-  const okPass = crypto.timingSafeEqual(sha(pass), SUPPORT_PASS_H);
-  return Boolean(m) && okUser && okPass;
+// Tout ce qui dépend des réglages, recalculé au démarrage et après chaque enregistrement.
+let configJson;
+function refresh() {
+  SECURITY_HEADERS['Content-Security-Policy'] = buildCsp();
+  configJson = Buffer.from(JSON.stringify(Object.assign(publicConfig(), { shots: GUIDE_SHOTS })));
+  const body = Buffer.from(brandCss());
+  files.set('/brand.css', { body, gz: zlib.gzipSync(body, { level: 9 }), type: TYPES['.css'], ext: '.css', live: true });
 }
-
-// Renvoie true si la requête peut continuer, sinon envoie la réponse (404, 401 ou 429).
-function guardSupport(req, res) {
-  const noindex = { 'X-Robots-Tag': 'noindex, nofollow', 'Cache-Control': 'no-store' };
-  if (!SUPPORT_ENABLED) { notFound(req, res, noindex); return false; }
-  const ip = clientIp(req);
-  const now = Date.now();
-  const f = failures.get(ip);
-  if (f && f.until > now && f.n >= MAX_FAILURES) {
-    send(req, res, 429, 'Trop de tentatives. Réessayez dans quelques minutes.\n', Object.assign({ 'Content-Type': 'text/plain; charset=utf-8', 'Retry-After': '900' }, noindex));
-    return false;
-  }
-  if (checkBasic(req.headers.authorization)) { failures.delete(ip); return true; }
-  if (req.headers.authorization) {
-    const cur = f && f.until > now ? f : { n: 0, until: now + LOCK_MS };
-    cur.n++;
-    failures.set(ip, cur);
-    if (failures.size > 5000) failures.clear();
-  }
-  send(req, res, 401, 'Authentification requise.\n', Object.assign({
-    'Content-Type': 'text/plain; charset=utf-8',
-    'WWW-Authenticate': 'Basic realm="Support ' + config.brand.replace(/["\\\r\n]/g, '') + '", charset="UTF-8"',
-  }, noindex));
-  return false;
-}
+refresh();
+settings.onChange(refresh);
 
 function notFound(req, res, extra = {}) {
   const nf = files.get('/404.html');
@@ -179,13 +144,12 @@ function sendText(req, res, status, text) {
 
 function serveStatic(req, res, pathname, extra = {}) {
   if (pathname === '/') pathname = '/index.html';
-  if (pathname === '/support' || pathname === '/support/') pathname = '/support/index.html';
   const f = files.get(pathname);
   if (!f) return false;
   const versioned = new URL(req.url, 'http://localhost').searchParams.get('v') === BUILD;
   const headers = Object.assign({
     'Content-Type': f.type,
-    'Cache-Control': f.ext === '.html' ? 'no-cache' : versioned ? 'public, max-age=31536000, immutable' : 'public, max-age=86400',
+    'Cache-Control': f.ext === '.html' || f.live ? 'no-cache' : versioned ? 'public, max-age=31536000, immutable' : 'public, max-age=86400',
     Vary: 'Accept-Encoding',
   }, extra);
   let body = f.body;
@@ -230,6 +194,11 @@ function handleAutoconfig(req, res, q) {
   });
 }
 
+// Espace d'administration (/support, /support/api/*) et fichiers envoyés (/uploads/*).
+const admin = createAdmin({ config, settings, dataDir: DATA_DIR, send, serveStatic, notFound });
+// Vérification du mot de passe par le client (POST /api/test), si l'option est activée.
+const connectionTest = createConnectionTest({ config, send, notFound });
+
 const server = http.createServer((req, res) => {
   let url;
   try {
@@ -237,11 +206,14 @@ const server = http.createServer((req, res) => {
   } catch {
     return sendText(req, res, 400, 'Requête invalide.');
   }
-  if (req.method !== 'GET' && req.method !== 'HEAD') {
-    return send(req, res, 405, 'Méthode non autorisée.\n', { Allow: 'GET, HEAD', 'Content-Type': 'text/plain; charset=utf-8' });
-  }
   const p = url.pathname;
   try {
+    // POST et PUT ne sont acceptés que sur /support/api/* (vérifié dans admin.js) et POST sur /api/test.
+    if (admin.handle(req, res, url)) return;
+    if (connectionTest.handle(req, res, url)) return;
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      return send(req, res, 405, 'Méthode non autorisée.\n', { Allow: 'GET, HEAD', 'Content-Type': 'text/plain; charset=utf-8' });
+    }
     if (p === '/healthz') return sendText(req, res, 200, 'ok');
     if (p === '/api/config') {
       return send(req, res, 200, configJson, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' });
@@ -249,11 +221,6 @@ const server = http.createServer((req, res) => {
     if (p === '/profile.mobileconfig') return handleProfile(req, res, url.searchParams);
     if (p === '/mail/config-v1.1.xml' || p === '/.well-known/autoconfig/mail/config-v1.1.xml') {
       return handleAutoconfig(req, res, url.searchParams);
-    }
-    if (p === '/support' || p.startsWith('/support/')) {
-      if (!guardSupport(req, res)) return;
-      if (serveStatic(req, res, p, { 'X-Robots-Tag': 'noindex, nofollow', 'Cache-Control': 'no-store' })) return;
-      return notFound(req, res, { 'X-Robots-Tag': 'noindex, nofollow' });
     }
     if (serveStatic(req, res, p)) return;
     return notFound(req, res);
@@ -264,13 +231,32 @@ const server = http.createServer((req, res) => {
 });
 
 server.keepAliveTimeout = 65000;
-server.listen(config.port, '0.0.0.0', () => {
-  console.log(`mccs à l'écoute sur :${config.port} (${files.size} fichiers statiques, ${GUIDE_SHOTS.length} captures, page /support ${SUPPORT_ENABLED ? 'active' : 'désactivée'})`);
-});
+// Importé (tests, outils) : pas d'écoute automatique.
+module.exports = { server, settings };
+if (require.main === module) {
+  let initial = null;
+  try { initial = admin.firstRun(); } catch (err) { console.error(`Mot de passe de première connexion impossible à créer : ${err.message}`); }
+  server.listen(config.port, '0.0.0.0', () => {
+    if (initial) {
+      console.log([
+        '',
+        '  Première connexion à mccs',
+        `  Ouvrez       http://<adresse-du-serveur>:${config.port}/support`,
+        `  Identifiant  ${config.supportAuth.user}`,
+        `  Mot de passe ${initial.password}`,
+        '  Changez-le ensuite (menu du compte > Changer le mot de passe) : ce message disparaîtra.',
+        '',
+      ].join('\n'));
+    }
+    console.log(`mccs à l'écoute sur :${config.port} (${files.size} fichiers statiques, ${GUIDE_SHOTS.length} captures, page /support ${admin.enabled() ? 'active' : 'désactivée'}, réglages ${settings.writable ? 'dans ' + DATA_DIR : 'en lecture seule'})`);
+  });
+}
 
 function shutdown() {
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 3000).unref();
 }
-process.on('SIGTERM', shutdown);
-process.on('SIGINT', shutdown);
+if (require.main === module) {
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
+}
