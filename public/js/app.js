@@ -35,6 +35,11 @@ const ICONS = {
   close: S('<path d="M6 6l12 12M18 6L6 18"/>', 'width="16" height="16" stroke-width="2.2"'),
   phone: S('<rect x="6" y="2" width="12" height="20" rx="3"/><path d="M11 18.5h2"/>'),
   key: S('<circle cx="8" cy="15" r="4"/><path d="M11 12l9-9M17 6l3 3M15 8l2 2"/>'),
+  send: S('<path d="M21 3L10 14"/><path d="M21 3l-7 18-4-7-7-4z"/>'),
+  inbox: S('<path d="M3 13l3-8h12l3 8v6a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M3 13h5l1.5 2.5h5L16 13h5"/>'),
+  cross: S('<path d="M7 7l10 10M17 7L7 17"/>', 'stroke-width="2.6"'),
+  bang: S('<path d="M12 6.5v7M12 17.5h.01"/>', 'stroke-width="2.8"'),
+  dash: S('<path d="M7 12h10"/>', 'stroke-width="2.6"'),
 };
 const SERVICE_META = {
   mail: { label: 'Mail', icon: 'mail' },
@@ -110,6 +115,8 @@ const DEFAULT_CFG = {
   shots: [],
   support: { email: '', phone: '', hours: '', address: '' },
   links: {},
+  connectionTest: false,
+  testMessages: { imap: {}, smtp: {} },
 };
 const state = {
   cfg: DEFAULT_CFG,
@@ -268,9 +275,176 @@ function showWizard(html, step, deviceId = '', quiet = false) {
 function renderHome() {
   $('#view-wizard').hidden = true;
   $('#view-home').hidden = false;
+  showForm();
   if (state.email) $('#email').value = state.email;
   if (state.name) $('#name').value = state.name;
   document.title = 'Configurer ma messagerie · ' + state.cfg.brand;
+}
+
+/* ---------- Vérification du mot de passe (option CONNECTION_TEST) ----------
+   Le mot de passe n'existe que le temps de l'envoi : lu dans le champ, aussitôt effacé du champ,
+   envoyé une fois à /api/test, jamais gardé dans l'état, l'URL, le stockage local ou le QR code. */
+const CHECK_LABELS = {
+  ok: 'Fonctionne', auth_failed: 'Mot de passe refusé', blocked: 'Accès bloqué', unreachable: 'Serveur injoignable',
+  tls_error: 'Connexion sécurisée impossible', timeout: 'Pas de réponse', error: 'Vérification impossible',
+  skipped: 'Non vérifié', pending: 'Vérification en cours…', waiting: 'En attente',
+};
+const CHECK_KIND = { ok: 'ok', auth_failed: 'bad', blocked: 'bad', skipped: 'idle', waiting: 'idle', pending: 'busy' };
+const CHECK_ICON = { ok: 'check', bad: 'cross', warn: 'bang', idle: 'dash', busy: '' };
+const checkOn = () => state.cfg.connectionTest === true;
+let checkRun = 0; // numéro de la vérification en cours (une réponse tardive d'un essai abandonné est ignorée)
+
+// Texte éditable dans l'admin : affiché tel quel (jamais du HTML), un paragraphe par ligne.
+const paras = (t, cls = '') => String(t || '').split(/\n+/).map((x) => x.trim()).filter(Boolean).map((x) => `<p${cls ? ` class="${cls}"` : ''}>${esc(x)}</p>`).join('');
+
+function showForm() {
+  checkRun++;
+  $('#check').hidden = true;
+  $('#check').innerHTML = '';
+  $('#start-form').hidden = false;
+  const pw = $('#password');
+  pw.value = '';
+  setPasswordVisible(false);
+  setBusy(false);
+}
+
+function setPasswordVisible(on) {
+  const pw = $('#password');
+  const btn = $('#password-toggle');
+  pw.type = on ? 'text' : 'password';
+  btn.setAttribute('aria-pressed', String(on));
+  btn.querySelector('span').textContent = on ? 'Masquer' : 'Afficher';
+  btn.setAttribute('aria-label', on ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+}
+
+function setBusy(on) {
+  const btn = $('#start-submit');
+  btn.disabled = on;
+  btn.classList.toggle('is-busy', on);
+}
+
+// Accueil selon l'option : champ mot de passe, bouton et mentions.
+function applyCheckOption() {
+  const on = checkOn();
+  $('#password-field').hidden = !on;
+  $('#password').disabled = !on;
+  $('#skip-check').hidden = !on;
+  $('#start-label').textContent = on ? 'Vérifier ma connexion' : 'Continuer';
+  $('#home-sub').textContent = on
+    ? 'Indiquez votre nom, votre adresse e-mail et son mot de passe. Nous vérifions qu’ils fonctionnent, puis nous vous guidons pas à pas.'
+    : 'Indiquez votre nom et votre adresse e-mail. Nous vous guidons ensuite pas à pas.';
+  $('#privacy-note').textContent = on
+    ? 'Votre mot de passe sert uniquement à vérifier la connexion. Il n’est pas enregistré.'
+    : 'Aucun mot de passe demandé. Rien n’est enregistré.';
+}
+
+function checkRow(service, status, message) {
+  const kind = CHECK_KIND[status] || 'warn';
+  const title = service === 'imap' ? 'Réception des e-mails' : 'Envoi des e-mails';
+  // Envoi refusé après une réception réussie : le mot de passe est bon, ce sont les droits d'envoi.
+  const label = service === 'smtp' && status === 'auth_failed' ? 'Identifiants refusés' : CHECK_LABELS[status] || status;
+  return `<li class="check-row is-${kind}">
+    <span class="check-svc">${ICONS[service === 'imap' ? 'inbox' : 'send']}</span>
+    <div class="check-main">
+      <p class="check-line"><span class="check-name">${title}</span><span class="check-state"><span class="check-ic">${CHECK_ICON[kind] ? ICONS[CHECK_ICON[kind]] : ''}</span>${esc(label)}</span></p>
+      ${message ? paras(message, 'check-msg') : ''}
+    </div>
+  </li>`;
+}
+
+// Liens d'aide : questions fréquentes, webmail, support.
+function checkHelp() {
+  const c = state.cfg;
+  const sup = c.support || {};
+  const items = [`<button type="button" class="link-plain" data-panel="panel-help" aria-haspopup="dialog">${ICONS.info}Aide et questions fréquentes</button>`];
+  if (c.webmailUrl) items.push(`<a class="link-plain" href="${esc(c.webmailUrl)}" target="_blank" rel="noopener">${ICONS.globe}Essayer le webmail</a>`);
+  if (sup.phone) items.push(`<a class="link-plain" href="${esc(sup.phoneUri || 'tel:' + String(sup.phone).replace(/[^+\d]/g, ''))}">${ICONS.phone}${esc(sup.phone)}</a>`);
+  else if (sup.email) items.push(`<a class="link-plain" href="mailto:${esc(sup.email)}">${ICONS.mail}${esc(sup.email)}</a>`);
+  return `<div class="check-help">${items.join('')}</div>`;
+}
+
+// r : { phase: 'pending' } | { phase: 'result', imap, smtp } | { phase: 'notice', title, message, primary, secondary }
+function renderCheck(r) {
+  const box = $('#check');
+  const m = state.cfg.testMessages || DEFAULT_CFG.testMessages;
+  const msg = (svc, st) => ((m[svc] || {})[st] || '');
+  const who = `<p class="check-who">${esc(state.email)}</p>`;
+  let head;
+  let body = '';
+  let actions = '';
+  if (r.phase === 'pending') {
+    head = `<span class="check-badge is-busy" aria-hidden="true"></span><h1 id="check-title" tabindex="-1">Vérification de votre connexion…</h1>${who}`;
+    body = `<ul class="check-rows">${checkRow('imap', 'pending', '')}${checkRow('smtp', 'waiting', '')}</ul>`;
+    actions = `<p class="check-wait">Cela prend quelques secondes.</p>`;
+  } else if (r.phase === 'result') {
+    const okIn = r.imap === 'ok';
+    const okAll = okIn && r.smtp === 'ok';
+    const title = okAll ? 'Votre adresse fonctionne' : okIn ? 'La réception fonctionne, pas l’envoi' : 'La connexion n’a pas abouti';
+    head = `<span class="check-badge is-${okAll ? 'ok' : okIn ? 'warn' : 'bad'}" aria-hidden="true">${ICONS[okAll ? 'check' : okIn ? 'bang' : 'cross']}</span><h1 id="check-title" tabindex="-1">${title}</h1>${who}`;
+    // Envoi sauté : le message de la réception suffit, la ligne reste courte.
+    body = `<ul class="check-rows">${checkRow('imap', r.imap, msg('imap', r.imap))}${checkRow('smtp', r.smtp, r.smtp === 'skipped' ? '' : msg('smtp', r.smtp))}</ul>`;
+    actions = okIn
+      ? `<button type="button" class="btn btn-primary btn-block" data-check="continue">Continuer${ICONS.arrow}</button>
+         ${okAll ? '' : '<p class="check-alt"><button type="button" class="link-plain" data-check="retry">Réessayer</button></p>'}`
+      : `<button type="button" class="btn btn-primary btn-block" data-check="retry">Réessayer${ICONS.arrow}</button>
+         <p class="check-alt"><button type="button" class="link-plain" data-check="continue">Continuer sans vérifier</button></p>`;
+    actions += checkHelp();
+  } else {
+    head = `<span class="check-badge is-warn" aria-hidden="true">${ICONS.bang}</span><h1 id="check-title" tabindex="-1">${esc(r.title)}</h1>${who}`;
+    body = `<div class="check-notice">${paras(r.message)}</div>`;
+    actions = `<button type="button" class="btn btn-primary btn-block" data-check="${r.primary[0]}">${esc(r.primary[1])}${ICONS.arrow}</button>
+      <p class="check-alt"><button type="button" class="link-plain" data-check="${r.secondary[0]}">${esc(r.secondary[1])}</button></p>${checkHelp()}`;
+  }
+  box.innerHTML = `<div class="check-head">${head}</div>${body}<div class="check-actions">${actions}</div>`;
+  box.hidden = false;
+  $('#start-form').hidden = true;
+  box.querySelector('h1').focus({ preventScroll: true });
+}
+
+async function runCheck() {
+  const pw = $('#password');
+  const err = $('#password-error');
+  const showPwErr = (t) => { err.textContent = t; err.hidden = !t; pw.setAttribute('aria-invalid', t ? 'true' : 'false'); };
+  if (!pw.value) { showPwErr('Saisissez le mot de passe de votre boîte mail, ou continuez sans vérifier.'); pw.focus(); return; }
+  if (/[\r\n\u0000]/.test(pw.value)) { showPwErr('Ce mot de passe contient un caractère invalide.'); pw.focus(); return; }
+  showPwErr('');
+  // Lu une fois, effacé du champ tout de suite : il ne sera jamais réaffiché.
+  let body = JSON.stringify({ email: state.email, password: pw.value });
+  pw.value = '';
+  setPasswordVisible(false);
+  const run = ++checkRun;
+  setBusy(true);
+  renderCheck({ phase: 'pending' });
+  let res = null;
+  let data = {};
+  try {
+    res = await fetch('/api/test', { method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body, cache: 'no-store', credentials: 'omit' });
+    data = await res.json().catch(() => ({}));
+  } catch { res = null; }
+  body = null;
+  setBusy(false);
+  if (run !== checkRun) return; // l'utilisateur est revenu au formulaire entre-temps
+  const m = state.cfg.testMessages || {};
+  if (res && res.status === 200 && data.imap && data.smtp) return renderCheck({ phase: 'result', imap: data.imap.status, smtp: data.smtp.status });
+  if (res && res.status === 404) { checkRun++; return go('#/appareil'); } // option désactivée entre-temps
+  if (res && res.status === 422 && data.error === 'email') { showForm(); return showEmailError('Cette adresse ne semble pas valide. Vérifiez-la (ex. jean@example.com).'); }
+  if (res && res.status === 422) { showForm(); showPwErr('Ce mot de passe contient un caractère invalide.'); return pw.focus(); }
+  if (res && res.status === 429) {
+    const min = Math.max(1, Math.ceil((Number(data.retryAfter) || 60) / 60));
+    return renderCheck({ phase: 'notice', title: 'Patientez avant de réessayer', message: (m.rate_limited || '') + `\nVous pourrez réessayer dans ${min} minute${min > 1 ? 's' : ''}.`, primary: ['continue', 'Continuer sans vérifier'], secondary: ['edit', 'Modifier mon adresse'] });
+  }
+  if (res && res.status === 403 && data.error === 'domain') {
+    return renderCheck({ phase: 'notice', title: 'Adresse non reconnue', message: m.domain || '', primary: ['edit', 'Modifier mon adresse'], secondary: ['continue', 'Continuer sans vérifier'] });
+  }
+  const why = res ? 'La vérification n’a pas pu se faire pour le moment. Réessayez dans un instant, ou continuez sans vérifier.' : 'Pas de connexion à Internet, ou le service ne répond pas. Vérifiez votre connexion, puis réessayez.';
+  renderCheck({ phase: 'notice', title: 'Vérification impossible', message: why, primary: ['retry', 'Réessayer'], secondary: ['continue', 'Continuer sans vérifier'] });
+}
+
+function checkAction(what) {
+  if (what === 'continue') { checkRun++; renderParams(); go('#/appareil'); return; }
+  showForm();
+  if (what === 'edit') { $('#email').focus(); $('#email').select(); return; }
+  $('#password').focus();
 }
 
 function renderDevices() {
@@ -625,27 +799,44 @@ async function copyText(text) {
 }
 
 /* ---------- Démarrage ---------- */
+function showEmailError(msg) {
+  const err = $('#email-error');
+  err.textContent = msg;
+  err.hidden = !msg;
+  $('#email').setAttribute('aria-invalid', msg ? 'true' : 'false');
+  if (msg) $('#email').focus();
+}
+
 function bind() {
   const form = $('#start-form');
   const emailInput = $('#email');
   const err = $('#email-error');
-  const showErr = (msg) => {
-    err.textContent = msg;
-    err.hidden = !msg;
-    emailInput.setAttribute('aria-invalid', msg ? 'true' : 'false');
-  };
-  form.addEventListener('submit', (e) => {
-    e.preventDefault();
+  // Adresse et nom validés puis retenus ; false si l'adresse est invalide.
+  const takeAddress = () => {
     const msg = emailError(emailInput.value);
-    if (msg) { showErr(msg); emailInput.focus(); return; }
-    showErr('');
+    showEmailError(msg);
+    if (msg) return false;
     state.email = normalizeEmail(emailInput.value);
     state.name = normalizeName($('#name').value);
     syncUrl();
     renderParams();
+    return true;
+  };
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if ($('#start-submit').disabled || !takeAddress()) return;
+    if (checkOn()) { runCheck(); return; }
     go('#/appareil');
   });
-  emailInput.addEventListener('input', () => { if (!err.hidden && !emailError(emailInput.value)) showErr(''); });
+  $('#skip-check-btn').addEventListener('click', () => {
+    if (!takeAddress()) return;
+    $('#password').value = '';
+    go('#/appareil');
+  });
+  $('#password-toggle').addEventListener('click', () => { setPasswordVisible($('#password').type === 'password'); $('#password').focus(); });
+  $('#password').addEventListener('input', () => { const pe = $('#password-error'); if (!pe.hidden) { pe.hidden = true; $('#password').setAttribute('aria-invalid', 'false'); } });
+  $('#check').addEventListener('click', (e) => { const b = e.target.closest('[data-check]'); if (b) checkAction(b.dataset.check); });
+  emailInput.addEventListener('input', () => { if (!err.hidden && !emailError(emailInput.value)) showEmailError(''); });
 
   document.addEventListener('click', async (e) => {
     const btn = e.target.closest('[data-copy]');
@@ -698,6 +889,7 @@ async function init() {
     if (r.ok) state.cfg = Object.assign({}, DEFAULT_CFG, await r.json());
   } catch { /* valeurs par défaut */ }
   applyConfigToStatic();
+  applyCheckOption();
   renderParams();
   // Lien direct du support (?email=…&device=…&app=…) : on ouvre directement l'écran demandé.
   if (state.email && !location.hash.startsWith('#/')) {

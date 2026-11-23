@@ -244,6 +244,71 @@ main { flex: 1 0 auto; }
 .field-help { color: var(--muted); font-size: .82rem; margin: 6px 0 0; }
 .privacy-note { color: var(--muted); font-size: .78rem; text-align: center; margin: 16px 0 0; }
 
+/* Mot de passe (option « vérifier la connexion ») : bouton Afficher/Masquer dans le champ. */
+.pw-wrap { position: relative; }
+.field .pw-wrap input { padding-right: 116px; font-family: var(--mono); font-size: .98rem; letter-spacing: .02em; }
+.field .pw-wrap input[type="password"] { letter-spacing: .12em; }
+.pw-toggle {
+  position: absolute; top: 6px; right: 6px; bottom: 6px; display: inline-flex; align-items: center; gap: 6px;
+  padding: 0 12px; border: 0; border-radius: 6px; background: var(--surface-2); color: var(--text); font-size: .82rem; font-weight: 500; cursor: pointer;
+}
+.pw-toggle:hover { background: var(--accent-soft); }
+.pw-toggle svg { width: 17px; height: 17px; color: var(--accent-text); }
+.pw-toggle .pw-hide, .pw-toggle[aria-pressed="true"] .pw-show { display: none; }
+.pw-toggle[aria-pressed="true"] .pw-hide { display: block; }
+.skip-check { text-align: center; margin: 8px 0 0; }
+.btn.is-busy { cursor: progress; opacity: .85; }
+.btn.is-busy svg { display: none; }
+.btn.is-busy::after { content: ""; flex: none; width: 16px; height: 16px; border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%; animation: spin .8s linear infinite; }
+
+/* Résultat de la vérification : une ligne par service, qui passe de « en cours » au résultat. */
+.check-card { --ok: var(--accent-text); --bad: var(--danger); --warn: var(--warn-text); }
+.check-head { display: grid; grid-template-columns: auto 1fr; column-gap: 14px; align-items: center; margin-bottom: 18px; }
+.check-head h1 { font-size: clamp(1.3rem, 5.4vw, 1.6rem); margin: 0; letter-spacing: -.01em; }
+.check-who { grid-column: 2; margin: 2px 0 0; color: var(--muted); font-family: var(--mono); font-size: .82rem; overflow-wrap: anywhere; }
+.check-badge { grid-row: span 2; width: 46px; height: 46px; border-radius: 50%; display: grid; place-items: center; }
+.check-badge svg { width: 22px; height: 22px; }
+.check-badge.is-ok { background: var(--accent-strong); color: var(--on-accent); }
+.check-badge.is-bad { background: color-mix(in srgb, var(--danger) 14%, var(--surface)); color: var(--danger); box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--danger) 45%, transparent); }
+.check-badge.is-warn { background: var(--warn-bg); color: var(--warn-text); box-shadow: inset 0 0 0 1.5px var(--warn-border); }
+.check-badge.is-busy { border: 3px solid var(--accent-soft); border-top-color: var(--accent-text); animation: spin .9s linear infinite; }
+
+.check-rows { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--border); }
+.check-row { display: grid; grid-template-columns: 36px 1fr; gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.check-svc { width: 36px; height: 36px; border-radius: var(--radius-sm); display: grid; place-items: center; background: var(--surface-2); color: var(--muted); }
+.check-svc svg { width: 19px; height: 19px; }
+.check-main { min-width: 0; }
+.check-line { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 2px 12px; margin: 6px 0 0; }
+.check-name { font-weight: 600; font-size: .95rem; }
+.check-state { display: inline-flex; align-items: center; gap: 6px; font-size: .86rem; font-weight: 600; }
+.check-ic { display: inline-grid; place-items: center; width: 20px; height: 20px; border-radius: 50%; }
+.check-ic svg { width: 12px; height: 12px; }
+.check-row.is-ok .check-state { color: var(--ok); }
+.check-row.is-ok .check-ic { background: var(--accent-strong); color: var(--on-accent); }
+.check-row.is-bad .check-state { color: var(--bad); }
+.check-row.is-bad .check-ic { background: var(--bad); color: var(--surface); }
+.check-row.is-warn .check-state { color: var(--warn); }
+.check-row.is-warn .check-ic { background: var(--warn); color: var(--surface); }
+.check-row.is-idle .check-state { color: var(--dim); font-weight: 500; }
+.check-row.is-idle .check-ic { border: 1.5px solid currentColor; }
+.check-row.is-idle .check-ic svg { width: 10px; height: 10px; }
+.check-row.is-busy .check-state { color: var(--muted); font-weight: 500; }
+.check-row.is-busy .check-ic { border: 2px solid var(--border-2); border-top-color: var(--accent-text); animation: spin .8s linear infinite; width: 16px; height: 16px; margin: 2px; }
+.check-row.is-ok .check-svc { color: var(--accent-text); background: var(--accent-soft); }
+.check-msg { color: var(--muted); font-size: .88rem; margin: 6px 0 0; max-width: 60ch; }
+.check-notice { padding: 14px 0 2px; border-top: 1px solid var(--border); color: var(--muted); font-size: .92rem; }
+.check-notice p { margin: 0 0 .6em; }
+.check-actions { margin-top: 20px; }
+.check-wait { color: var(--muted); font-size: .84rem; margin: 0; }
+.check-alt { text-align: center; margin: 8px 0 0; }
+.check-help { display: flex; flex-wrap: wrap; justify-content: center; gap: 0 16px; margin-top: 16px; padding-top: 10px; border-top: 1px solid var(--border); }
+.check-help svg { color: var(--accent-text); }
+@media (max-width: 479px) {
+  .check-line { flex-direction: column; align-items: flex-start; }
+  .check-head { column-gap: 12px; }
+  .check-badge { width: 40px; height: 40px; }
+}
+
 
 /* ===== Assistant ===== */
 .wizard { padding: 22px 0 24px; }
