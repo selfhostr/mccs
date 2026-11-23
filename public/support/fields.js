@@ -25,13 +25,12 @@ export const HELP = {
   SMTP_SECURITY: 'La façon dont la connexion est chiffrée. Prenez la même que dans votre serveur mail.',
   WEBMAIL_URL: 'La page où vos clients lisent leurs e-mails dans un navigateur.',
   ALLOWED_DOMAINS: 'Seules les adresses de ces domaines pourront vérifier leur mot de passe sur le configurateur. Sans domaine, toutes les adresses sont acceptées.',
-  DAV_PRESET: 'CalDAV (agenda) et CardDAV (contacts) synchronisent le calendrier et le carnet d’adresses. Choisissez MDaemon si c’est votre serveur ; sinon, « Autre serveur » utilise la découverte automatique standard.',
-  DAV_BASE_URL: 'L’adresse du serveur d’agenda et de contacts. Les adresses détaillées en sont déduites.',
+  DAV_BASE_URL: 'À remplir seulement si l’agenda et les contacts sont sur un autre serveur que la messagerie. La détection automatique part de cette adresse.',
   CALDAV_URL: 'Adresse générale de l’agenda, montrée tant que le client n’a pas saisi son adresse.',
   CARDDAV_URL: 'Adresse générale des contacts, montrée tant que le client n’a pas saisi son adresse.',
   TASKS_URL: 'Adresse générale des tâches.',
-  DAV_DISCOVERY_URL: 'Adresse de découverte automatique de l’agenda (utilisée par DAVx⁵ et CalDAV Synchronizer).',
-  DAV_CARD_DISCOVERY_URL: 'Adresse de découverte automatique des contacts.',
+  DAV_DISCOVERY_URL: 'L’adresse de l’agenda (CalDAV) donnée aux applications, qui y trouvent seules les agendas du client. Remplie par la détection automatique.',
+  DAV_CARD_DISCOVERY_URL: 'L’adresse des contacts (CardDAV) donnée aux applications. Remplie par la détection automatique.',
   DAV_PRINCIPAL_URL_TEMPLATE: 'Variables possibles : {email} (adresse complète), {local} (avant le @) et {domain} (après le @).',
   DAV_CALENDAR_URL_TEMPLATE: 'Variables possibles : {email}, {local} et {domain}.',
   DAV_TASKS_URL_TEMPLATE: 'Variables possibles : {email}, {local} et {domain}.',
@@ -47,7 +46,7 @@ const OPTION_LABELS = {
   'SSL/TLS': 'SSL/TLS (chiffrée dès la connexion)',
   STARTTLS: 'STARTTLS (chiffrée juste après la connexion)',
   mdaemon: 'MDaemon',
-  generic: 'Autre serveur (découverte standard)',
+  generic: 'Serveur CalDAV/CardDAV standard',
 };
 export const optionLabel = (v) => OPTION_LABELS[v] || v;
 
@@ -100,9 +99,11 @@ export function davUrl(template, email) {
   const enc = (s) => encodeURIComponent(s).replace(/%40/g, '@');
   return template.replace(/\{email\}/g, enc(local + '@' + domain)).replace(/\{local\}/g, enc(local)).replace(/\{domain\}/g, enc(domain));
 }
-function presetUrls(preset, base) {
+// Type de serveur déduit d'une adresse saisie à la main : les chemins /webdav/ sont ceux de MDaemon.
+export const presetFor = (url) => (/^https?:\/\/[^/]+\/webdav(?:\/|$)/i.test(String(url || '').trim()) ? 'mdaemon' : 'generic');
+
+function presetUrls(preset, base, cal, card) {
   if (preset === 'generic') {
-    const cal = base + '/.well-known/caldav', card = base + '/.well-known/carddav';
     return { CALDAV_URL: cal, CARDDAV_URL: card, TASKS_URL: cal, DAV_PRINCIPAL_URL_TEMPLATE: cal, DAV_CALENDAR_URL_TEMPLATE: cal, DAV_TASKS_URL_TEMPLATE: cal, DAV_CONTACTS_URL_TEMPLATE: card };
   }
   return {
@@ -137,7 +138,7 @@ export function resolver(entries) {
       case 'PROFILE_ORGANIZATION': return resolve('BRAND_NAME');
       default: {
         if (k in DEFAULTS) return DEFAULTS[k];
-        if (PRESET_KEYS.includes(k)) return presetUrls(resolve('DAV_PRESET'), base())[k];
+        if (PRESET_KEYS.includes(k)) return presetUrls(resolve('DAV_PRESET'), base(), resolve('DAV_DISCOVERY_URL'), resolve('DAV_CARD_DISCOVERY_URL'))[k];
         return f && f.source === 'default' ? f.effective || '' : '';
       }
     }

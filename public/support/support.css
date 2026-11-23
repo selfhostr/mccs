@@ -216,6 +216,16 @@
 @media (max-width: 959px) { .wiz-aside { margin-bottom: 20px; } }
 
 /* Aperçu des URL personnelles (calendrier et contacts) */
+/* Détection automatique de l'agenda et des contacts (mêmes messages que le test des serveurs). */
+.disc { margin: 4px 0 16px; padding: 14px 16px 0; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2); }
+.disc .probe { padding-bottom: 14px; }
+.disc-url { margin: 2px 0 4px; }
+.disc-url code { font-family: var(--mono); font-size: .8rem; overflow-wrap: anywhere; color: var(--text); }
+.disc-note { margin: 0 0 14px; font-size: .86rem; }
+.disc-log { margin: 0 0 14px; font-size: .8rem; color: var(--muted); }
+.disc-log summary { cursor: pointer; min-height: 32px; display: list-item; }
+.disc-log ul { margin: 6px 0 0; padding-left: 18px; }
+.disc-log li { overflow-wrap: anywhere; margin: 2px 0; }
 .dav-pv { margin: 4px 0 18px; padding: 16px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface-2); }
 .dav-title { margin: 0 0 4px; font-size: .9rem; color: var(--muted); }
 .dav-title strong { color: var(--text); font-weight: 600; }

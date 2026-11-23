@@ -23,7 +23,7 @@ Mini syntax used in step texts:
 | `dl: true` | Download button for the Apple profile |
 | `sub: '...'` | Secondary explanatory text |
 | `shot: 'folder/file.png'` | Optional screenshot |
-| `'[mdaemon] ...'` | Tip prefix: shown only with `DAV_PRESET=mdaemon` |
+| `'[mdaemon] ...'` | Tip prefix: shown only when the server type is MDaemon (`DAV_PRESET=mdaemon`, the default or detected) |
 
 Copyable values (`f:` and `{F:}`) are defined by `fieldDefs()` in `public/js/app.js`.
 

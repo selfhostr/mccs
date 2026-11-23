@@ -53,11 +53,15 @@ function build(src) {
     return Number.isFinite(n) && n > 0 && n < 65536 ? n : def;
   };
 
-  // Préréglages des URL DAV. « mdaemon » : chemins /webdav/… et collections b64=… de MDaemon.
-  // « generic » : découverte standard (.well-known), pour tout serveur CalDAV/CardDAV conforme.
+  // Type de serveur DAV, déduit par la découverte de l'admin (server/discover.js) ou fixé dans le .env.
+  // « mdaemon » (défaut, inchangé) : chemins /webdav/… et collections b64=… de MDaemon.
+  // « generic » : tout serveur CalDAV/CardDAV conforme ; les applications partent des URL de découverte
+  // (DAV_DISCOVERY_URL et DAV_CARD_DISCOVERY_URL, /.well-known/… par défaut) et trouvent le reste seules.
   const PRESET = env('DAV_PRESET', 'mdaemon').toLowerCase() === 'generic' ? 'generic' : 'mdaemon';
   const MAIL_HOST = env('MAIL_HOST', 'mail.example.com');
   const DAV_BASE = env('DAV_BASE_URL', 'https://' + MAIL_HOST).replace(/\/+$/, '');
+  const DISCOVERY = env('DAV_DISCOVERY_URL', DAV_BASE + '/.well-known/caldav');
+  const CARD_DISCOVERY = env('DAV_CARD_DISCOVERY_URL', DAV_BASE + '/.well-known/carddav');
   const PRESETS = {
     mdaemon: {
       caldavUrl: DAV_BASE + '/webdav/calendar',
@@ -69,13 +73,13 @@ function build(src) {
       contacts: DAV_BASE + '/webdav/carddav/{domain}/{local}/b64=Q29udGFjdHM/',
     },
     generic: {
-      caldavUrl: DAV_BASE + '/.well-known/caldav',
-      carddavUrl: DAV_BASE + '/.well-known/carddav',
-      tasksUrl: DAV_BASE + '/.well-known/caldav',
-      principal: DAV_BASE + '/.well-known/caldav',
-      calendar: DAV_BASE + '/.well-known/caldav',
-      tasks: DAV_BASE + '/.well-known/caldav',
-      contacts: DAV_BASE + '/.well-known/carddav',
+      caldavUrl: DISCOVERY,
+      carddavUrl: CARD_DISCOVERY,
+      tasksUrl: DISCOVERY,
+      principal: DISCOVERY,
+      calendar: DISCOVERY,
+      tasks: DISCOVERY,
+      contacts: CARD_DISCOVERY,
     },
   };
   const P = PRESETS[PRESET];
@@ -108,8 +112,8 @@ function build(src) {
     carddavUrl: env('CARDDAV_URL', P.carddavUrl),
     tasksUrl: env('TASKS_URL', P.tasksUrl),
     // URL de découverte (.well-known) : DAVx5, bouton de découverte de CalDAV Synchronizer.
-    davDiscoveryUrl: env('DAV_DISCOVERY_URL', DAV_BASE + '/.well-known/caldav'),
-    davCardDiscoveryUrl: env('DAV_CARD_DISCOVERY_URL', DAV_BASE + '/.well-known/carddav'),
+    davDiscoveryUrl: DISCOVERY,
+    davCardDiscoveryUrl: CARD_DISCOVERY,
     // Gabarits des URL personnelles, dérivées de l'adresse saisie.
     // Variables : {email} (adresse complète), {local} (partie avant @), {domain}.
     davTemplates: {

@@ -12,10 +12,13 @@ All notable changes to mccs. The format follows [Keep a Changelog](https://keepa
 - The guide shows one step at a time, with "Step n of N", a progress bar, Previous and Next buttons, a slide transition and a screenshot column that appears only when the step has a screenshot. Each step has its own URL (`#/guide/<device>/<guide>/<n>`); the "done" checkboxes are gone.
 - Admin API under `/support/api/*`: session sign-in (cookie limited to `/support`), settings, logo and background upload (`/uploads/`), TLS test of the mail servers, admin password change (scrypt hash in `/data/admin.json`). `ALLOWED_DOMAINS` setting.
 
+- Automatic detection of the calendar (CalDAV) and contacts (CardDAV) addresses in the admin, as clients do (RFC 6764: DNS `SRV`/`TXT`, then `/.well-known` with redirections), with MDaemon recognised. It runs by itself at the "Calendrier" step of the setup assistant and on demand ("Détecter automatiquement") in Settings. New route `POST /support/api/discover`.
+
 ### Changed
 
 - `/support` uses a sign-in form and a session instead of HTTP Basic.
 - The project is now `mccs` (Mail, Calendar, Contacts Setup) and lives at `github.com/selfhostr/mccs`.
 - README and documentation follow the same layout as the other selfhostr projects.
+- The "Type de serveur" list (MDaemon / other) is gone from the admin: `DAV_PRESET` is now set by the detection (still accepted in `.env`, default unchanged). With `DAV_PRESET=generic`, the calendar, tasks and contacts URLs follow `DAV_DISCOVERY_URL` and `DAV_CARD_DISCOVERY_URL` (unchanged when those are not set).
 - The "Liens clients" tab no longer prepares an email or SMS (buttons, mobile number field and message texts removed): it gives the link to copy and the QR code (PNG or SVG) only.
 - Inter (text) and JetBrains Mono (code, identifiers, numbers), self-hosted under `public/fonts` with their SIL OFL 1.1 licences, replace the system font stacks. No third-party request is made for fonts.

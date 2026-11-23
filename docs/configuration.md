@@ -6,7 +6,7 @@ Settings come from three layers, the first one set wins:
 2. **Environment variables**, read at startup. With Docker, put them in `.env` (see `.env.example`) and run `docker compose up -d`; no rebuild needed.
 3. **Built-in defaults.**
 
-`config.json` only holds the values changed in the admin, keyed by variable name. Values derived from another one (hosts from `MAIL_HOST`, DAV URLs from `DAV_BASE_URL` and `DAV_PRESET`) keep following it until they are changed themselves. The previous version is kept in `config.prev.json`. `PORT`, `SUPPORT_USER`, `SUPPORT_PASSWORD`, `DATA_DIR` and `TRUSTED_PROXY_HEADER` can only be set in the environment.
+`config.json` only holds the values changed in the admin, keyed by variable name. Values derived from another one (hosts from `MAIL_HOST`, DAV URLs from `DAV_BASE_URL`, `DAV_PRESET` and the discovery URLs) keep following it until they are changed themselves. The previous version is kept in `config.prev.json`. `PORT`, `SUPPORT_USER`, `SUPPORT_PASSWORD`, `DATA_DIR` and `TRUSTED_PROXY_HEADER` can only be set in the environment.
 
 The compose file mounts the `mccs-data` volume on `/data`. Without a writable `/data`, the app runs as before from the environment and saving is refused.
 
@@ -29,11 +29,11 @@ The compose file mounts the `mccs-data` volume on `/data`. Without a writable `/
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURITY` | `MAIL_HOST` / `465` / `SSL/TLS` | Outgoing server |
 | `WEBMAIL_URL` | `https://MAIL_HOST/` | Webmail link |
 | `ALLOWED_DOMAINS` | empty | Email domains accepted by the connection test, comma-separated (`example.com, example.org`); empty = all |
-| `DAV_PRESET` | `mdaemon` | `mdaemon` or `generic` |
+| `DAV_PRESET` | `mdaemon` | Server type, `mdaemon` or `generic`. Set by the admin's automatic detection; still accepted in `.env` |
 | `DAV_BASE_URL` | `https://MAIL_HOST` | Base of all DAV URLs |
-| `CALDAV_URL`, `CARDDAV_URL`, `TASKS_URL` | per preset | Generic server URLs shown before an address is typed |
-| `DAV_DISCOVERY_URL`, `DAV_CARD_DISCOVERY_URL` | `DAV_BASE_URL/.well-known/caldav` and `/carddav` | Discovery URLs (DAVx5, CalDAV Synchronizer) |
-| `DAV_PRINCIPAL_URL_TEMPLATE`, `DAV_CALENDAR_URL_TEMPLATE`, `DAV_TASKS_URL_TEMPLATE`, `DAV_CONTACTS_URL_TEMPLATE` | per preset | Personal URL templates (`{email}`, `{local}`, `{domain}`) |
+| `CALDAV_URL`, `CARDDAV_URL`, `TASKS_URL` | per server type | Generic server URLs shown before an address is typed |
+| `DAV_DISCOVERY_URL`, `DAV_CARD_DISCOVERY_URL` | `DAV_BASE_URL/.well-known/caldav` and `/carddav` | Calendar and contacts discovery URLs, filled by the automatic detection. With `generic`, every calendar and contacts URL follows them |
+| `DAV_PRINCIPAL_URL_TEMPLATE`, `DAV_CALENDAR_URL_TEMPLATE`, `DAV_TASKS_URL_TEMPLATE`, `DAV_CONTACTS_URL_TEMPLATE` | per server type | Personal URL templates (`{email}`, `{local}`, `{domain}`) |
 | `PUBLIC_URL` | `https://config.example.com` | Public address of this app (links, QR codes) |
 | `SUPPORT_PHONE`, `SUPPORT_EMAIL`, `SUPPORT_HOURS`, `SUPPORT_ADDRESS` | empty | Support contact; each hidden when empty |
 | `SUPPORT_USER` | `support` | Admin user for `/support` |
@@ -62,10 +62,28 @@ Ports and security labels: `IMAP_PORT` 993, `IMAP_SECURITY` `SSL/TLS`, `SMTP_POR
 
 ## Calendar and contacts
 
-`DAV_PRESET` is `mdaemon` (default) or `generic` (every DAV URL falls back to `.well-known` discovery). Any URL can be overridden individually:
+### Automatic detection
+
+You normally set nothing here. In the admin (setup assistant, step "Calendrier", and Settings > "Calendrier et contacts"), mccs looks for the calendar and contacts services of your server, as clients do (RFC 6764), without credentials:
+
+1. DNS `SRV` records `_caldavs._tcp` and `_carddavs._tcp` (and their `TXT` `path=`), first on the domain (`example.com` for `mail.example.com`), then on the host itself;
+2. `https://<host>/.well-known/caldav` and `/.well-known/carddav`, following up to 5 redirections (https only).
+
+The host is the one of `DAV_BASE_URL`, which defaults to `https://MAIL_HOST`. An address is kept only when a DAV service really answers there: a `207 Multi-Status` reply to `PROPFIND`, a `DAV` header announcing `calendar-access` or `addressbook` (on `PROPFIND` or `OPTIONS`), or a `401` asking for credentials at an address given by DNS or reached through a `.well-known` redirection. Without credentials mccs cannot know each customer's personal URL, so it keeps the context URL (after redirections); DAVx⁵, iPhone/iPad/Mac, Thunderbird and CalDAV Synchronizer find the customer's calendars and address books from there.
+
+The detection runs by itself when you reach the "Calendrier" step with `MAIL_HOST` filled in, and on demand with "Détecter automatiquement". What it finds fills these settings, which you can still edit under "Avancé":
+
+- an MDaemon server (recognised by its `Server` or `WWW-Authenticate` header, or by its `/webdav/` paths) sets `DAV_PRESET=mdaemon`: the personal URLs follow the MDaemon layout (see [MDaemon](mdaemon.md)) and only the host is taken from the result (`DAV_BASE_URL`, when it differs);
+- any other server sets `DAV_PRESET=generic`, `DAV_DISCOVERY_URL` (calendar) and `DAV_CARD_DISCOVERY_URL` (contacts). With `generic`, every calendar, tasks and contacts URL shown to customers is one of these two addresses.
+
+When nothing is found, type the two addresses under "Avancé". The server type then follows what you type: an address with `/webdav/` means MDaemon, anything else `generic`.
+
+### Manual setting
+
+`DAV_PRESET` stays accepted in `.env` and still defaults to `mdaemon`, so an existing installation gives exactly the same URLs as before. With `generic` and no discovery URL set, every DAV URL is `DAV_BASE_URL/.well-known/caldav` or `/carddav`, as before. Any URL can be overridden individually:
 
 - `CALDAV_URL`, `CARDDAV_URL`, `TASKS_URL`: generic URLs shown before an address is typed.
-- `DAV_DISCOVERY_URL`, `DAV_CARD_DISCOVERY_URL`: discovery URLs.
+- `DAV_DISCOVERY_URL`, `DAV_CARD_DISCOVERY_URL`: discovery URLs; with `generic`, they are also the default for every other URL below.
 - `DAV_PRINCIPAL_URL_TEMPLATE`, `DAV_CALENDAR_URL_TEMPLATE`, `DAV_TASKS_URL_TEMPLATE`, `DAV_CONTACTS_URL_TEMPLATE`: personal URLs. Placeholders `{email}`, `{local}` (before the `@`) and `{domain}`, lower-cased. They are applied both in the browser and in the Apple profile.
 
 ## App, support and profile
@@ -86,16 +104,18 @@ DAV_PRESET=mdaemon
 SUPPORT_EMAIL=support@example.com
 ```
 
-## Example: generic server (Dovecot + SOGo, Nextcloud...)
+## Example: other servers (Nextcloud, SOGo, Radicale, Baïkal, Stalwart...)
+
+Easiest: let the admin detect the addresses. In `.env` only, the equivalent is:
 
 ```env
 MAIL_HOST=mail.example.com
 PUBLIC_URL=https://config.example.com
 DAV_PRESET=generic
-# Nextcloud-style explicit URLs
-DAV_BASE_URL=https://cloud.example.com
-CALDAV_URL=https://cloud.example.com/remote.php/dav
-CARDDAV_URL=https://cloud.example.com/remote.php/dav
+# What the detection would find for a Nextcloud on another host
+DAV_DISCOVERY_URL=https://cloud.example.com/remote.php/dav/
+DAV_CARD_DISCOVERY_URL=https://cloud.example.com/remote.php/dav/
+# Optional: per-customer URLs instead of the discovery URLs
 DAV_CALENDAR_URL_TEMPLATE=https://cloud.example.com/remote.php/dav/calendars/{email}/personal/
 DAV_CONTACTS_URL_TEMPLATE=https://cloud.example.com/remote.php/dav/addressbooks/users/{email}/contacts/
 ```

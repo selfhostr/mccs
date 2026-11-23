@@ -1,6 +1,6 @@
 // Espace d'administration /support : assistant d'installation, réglages, liens clients et compte.
 // Contrat d'API : docs/superpowers/plans/2026-11-21-pr3-espace-admin.md (routes /support/api/*).
-import { createControl, resolver, exampleEmail, davUrl, backgroundCss, optionLabel, isHost, h, ICONS } from '/support/fields.js';
+import { createControl, resolver, exampleEmail, davUrl, backgroundCss, optionLabel, isHost, presetFor, DEFAULTS, h, ICONS } from '/support/fields.js';
 import { initLinks, reloadConfig, toast } from '/support/support.js';
 
 const $ = (s, root = document) => root.querySelector(s);
@@ -185,16 +185,126 @@ function davPreview() {
   const list = h('div', { class: 'fields dav-list' });
   const note = h('p', { class: 'field-help' });
   const node = h('div', { class: 'dav-pv' }, title, list, note);
-  const ROWS = [['Agenda personnel', 'DAV_CALENDAR_URL_TEMPLATE'], ['Tâches', 'DAV_TASKS_URL_TEMPLATE'], ['Contacts', 'DAV_CONTACTS_URL_TEMPLATE'], ['Compte (découverte)', 'DAV_PRINCIPAL_URL_TEMPLATE']];
+  const MDAEMON_ROWS = [['Agenda personnel', 'DAV_CALENDAR_URL_TEMPLATE'], ['Tâches', 'DAV_TASKS_URL_TEMPLATE'], ['Contacts', 'DAV_CONTACTS_URL_TEMPLATE'], ['Compte (découverte)', 'DAV_PRINCIPAL_URL_TEMPLATE']];
+  const GENERIC_ROWS = [['Agenda et tâches (CalDAV)', 'DAV_CALENDAR_URL_TEMPLATE'], ['Contacts (CardDAV)', 'DAV_CONTACTS_URL_TEMPLATE']];
   function update(resolve) {
     const email = exampleEmail(resolve('MAIL_HOST'));
+    const generic = resolve('DAV_PRESET') === 'generic';
     title.replaceChildren(h('span', { text: 'Aperçu pour ' }), h('strong', { class: 'is-mono', text: email }));
-    list.replaceChildren(...ROWS.map(([label, key]) => h('div', { class: 'kv' }, h('div', { class: 'kv-main' }, h('span', { class: 'kv-label', text: label }), h('span', { class: 'kv-value', text: davUrl(resolve(key), email) })))));
-    note.textContent = resolve('DAV_PRESET') === 'generic'
-      ? 'Avec la découverte standard, les applications trouvent seules l’agenda et les contacts à partir de l’adresse du serveur.'
-      : 'Ce sont les adresses que le guide indiquera à ce client. Elles sont calculées à partir de son adresse e-mail.';
+    list.replaceChildren(...(generic ? GENERIC_ROWS : MDAEMON_ROWS).map(([label, key]) => h('div', { class: 'kv' }, h('div', { class: 'kv-main' }, h('span', { class: 'kv-label', text: label }), h('span', { class: 'kv-value', text: davUrl(resolve(key), email) })))));
+    note.textContent = generic
+      ? 'Les applications du client partent de ces adresses et y trouvent seules ses agendas et carnets d’adresses.'
+      : 'Serveur MDaemon : ce sont les adresses que le guide indiquera à ce client, calculées à partir de son adresse e-mail.';
   }
   return { node, update };
+}
+
+/* ---------- Détection automatique de l'agenda et des contacts ---------- */
+const DAV_URL_KEYS = ['DAV_DISCOVERY_URL', 'DAV_CARD_DISCOVERY_URL'];
+const VIA = { dns: 'Trouvé via le DNS (enregistrement SRV).', 'well-known': 'Trouvé via l’adresse standard /.well-known.' };
+
+// Valeur déduite : vide si elle est égale à la valeur par défaut (le réglage continue alors de la suivre).
+function setDerived(ctrls, key, value, getResolver) {
+  const c = ctrls.get(key);
+  if (!c) return;
+  c.setValue(value && value !== getResolver().fallback(key) ? value : '');
+  c.setError('');
+}
+// Adresse d'agenda ou de contacts saisie à la main : le type de serveur en est déduit (/webdav/ = MDaemon).
+function followManualUrl(ctrls, ctrl, getResolver) {
+  if (!ctrl || !DAV_URL_KEYS.includes(ctrl.key) || !ctrl.value.trim()) return;
+  setDerived(ctrls, 'DAV_PRESET', presetFor(ctrl.value), getResolver);
+}
+const hostOf = (url) => { try { return new URL(url).hostname; } catch { return ''; } };
+const originOf = (url) => { try { return new URL(url).origin; } catch { return ''; } };
+
+// Bouton « Détecter automatiquement » : interroge /support/api/discover et pré-remplit les adresses.
+function davDetect(ctrls, getResolver, onApplied) {
+  const where = h('code', {});
+  const btn = h('button', { type: 'button', class: 'btn btn-ghost btn-sm probe-btn', text: 'Détecter automatiquement' });
+  const result = h('div', { class: 'probe-result', 'aria-live': 'polite' });
+  const node = h('div', { class: 'disc' },
+    h('div', { class: 'probe' }, btn, h('p', { class: 'probe-hint' }, h('span', { text: 'Cherche l’agenda et les contacts sur ' }), where, h('span', { text: ', sans envoyer d’identifiants.' }))),
+    result);
+  let adv = null;
+  let running = false;
+  let lastAuto = '';
+
+  const found = (title, item) => h('div', { class: 'probe-msg is-ok' },
+    h('span', { class: 'probe-icon', html: CHECK_ICON }),
+    h('div', {}, h('p', { class: 'probe-title', text: title }), h('p', { class: 'disc-url' }, h('code', { text: item.url })), h('p', { class: 'probe-detail', text: VIA[item.via] || '' })));
+  const missing = (title, text) => h('div', { class: 'probe-msg is-err' },
+    h('span', { class: 'probe-icon', html: WARN_ICON }),
+    h('div', {}, h('p', { class: 'probe-title', text: title }), h('p', { text })));
+
+  function apply(d) {
+    const any = d.caldav || d.carddav;
+    if (d.server === 'mdaemon') {
+      // MDaemon : gabarits MDaemon calculés depuis l'URL de base ; seul l'hôte trouvé est repris.
+      setDerived(ctrls, 'DAV_PRESET', 'mdaemon', getResolver);
+      const o = any ? originOf(any.url) : '';
+      if (o && o !== originOf(getResolver().resolve('DAV_BASE_URL'))) setDerived(ctrls, 'DAV_BASE_URL', o, getResolver);
+      for (const k of DAV_URL_KEYS) setDerived(ctrls, k, '', getResolver);
+    } else if (any) {
+      setDerived(ctrls, 'DAV_PRESET', 'generic', getResolver);
+      if (d.caldav) setDerived(ctrls, 'DAV_DISCOVERY_URL', d.caldav.url, getResolver);
+      if (d.carddav) setDerived(ctrls, 'DAV_CARD_DISCOVERY_URL', d.carddav.url, getResolver);
+    }
+    onApplied();
+  }
+
+  function render(d, host) {
+    const rows = [];
+    if (d.caldav) rows.push(found('Agenda trouvé', d.caldav));
+    if (d.carddav) rows.push(found('Contacts trouvés', d.carddav));
+    if (!d.caldav && !d.carddav) {
+      rows.push(missing('Rien trouvé', `Aucun agenda ni carnet d’adresses ne répond sur ${host}. Saisissez les adresses à la main dans « Avancé » ci-dessous, ou indiquez-y l’adresse du serveur d’agenda s’il est ailleurs, puis relancez la détection.`));
+    } else if (!d.caldav) {
+      rows.push(missing('Agenda non trouvé', 'Saisissez son adresse à la main dans « Avancé » ci-dessous.'));
+    } else if (!d.carddav) {
+      rows.push(missing('Contacts non trouvés', 'Saisissez leur adresse à la main dans « Avancé » ci-dessous.'));
+    }
+    if (d.server === 'mdaemon') rows.push(h('p', { class: 'disc-note', text: 'Serveur MDaemon reconnu : les adresses personnelles de vos clients suivent le modèle MDaemon.' }));
+    if (Array.isArray(d.details) && d.details.length) {
+      rows.push(h('details', { class: 'disc-log' }, h('summary', { text: 'Détail des vérifications' }), h('ul', {}, d.details.map((t) => h('li', { text: String(t) })))));
+    }
+    result.replaceChildren(...rows);
+    if (adv && (!d.caldav || !d.carddav)) adv.open = true;
+  }
+
+  async function run() {
+    if (running) return;
+    const base = getResolver().resolve('DAV_BASE_URL');
+    const host = hostOf(base);
+    if (!isHost(host)) {
+      result.replaceChildren(missing('Détection impossible', 'Indiquez d’abord le nom de votre serveur mail, ou l’adresse du serveur d’agenda dans « Avancé ».'));
+      return;
+    }
+    running = true;
+    lastAuto = host;
+    setBusy(btn, true, 'Recherche en cours…');
+    result.replaceChildren(h('p', { class: 'probe-wait', text: `Recherche de l’agenda et des contacts sur ${host}…` }));
+    const r = await api('POST', '/support/api/discover', { host: base });
+    setBusy(btn, false);
+    running = false;
+    if (r.status === 200 && r.data.ok) { apply(r.data); render(r.data, host); return; }
+    const why = r.status === 422 && r.data.errors && r.data.errors.host ? r.data.errors.host : failMessage(r);
+    result.replaceChildren(missing('Détection impossible', why));
+  }
+  btn.addEventListener('click', run);
+
+  return {
+    node,
+    setAdvanced(el) { adv = el; },
+    update(r) { where.textContent = hostOf(r.resolve('DAV_BASE_URL')) || '?'; },
+    // Lancement automatique : une fois par serveur, seulement si le serveur mail est renseigné.
+    auto() {
+      const r = getResolver();
+      const host = hostOf(r.resolve('DAV_BASE_URL'));
+      if (r.resolve('MAIL_HOST') === DEFAULTS.MAIL_HOST || !host || host === lastAuto || !state.writable) return;
+      run();
+    },
+  };
 }
 
 // Affichage lisible d'une valeur (récapitulatif).
@@ -213,7 +323,7 @@ function display(key, type, v) {
 const STEPS = [
   { short: 'Marque', title: 'Votre marque', lead: 'Le nom, le logo et les couleurs que vos clients verront sur le configurateur.', keys: ['BRAND_NAME', 'BRAND_LOGO_URL', 'BRAND_ACCENT', 'BRAND_BACKGROUND'] },
   { short: 'Serveurs mail', title: 'Vos serveurs mail', lead: 'Les serveurs auxquels les applications de vos clients se connecteront. Testez-les avant de continuer.', keys: ['MAIL_HOST', 'IMAP_HOST', 'IMAP_PORT', 'IMAP_SECURITY', 'SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURITY', 'WEBMAIL_URL'] },
-  { short: 'Calendrier', title: 'Calendrier et contacts', lead: 'Où les applications synchronisent l’agenda et le carnet d’adresses de vos clients.', keys: ['DAV_PRESET', 'DAV_BASE_URL'] },
+  { short: 'Calendrier', title: 'Calendrier et contacts', lead: 'Où les applications synchronisent l’agenda et le carnet d’adresses de vos clients. mccs les cherche lui-même sur votre serveur.', keys: ['DAV_PRESET', 'DAV_BASE_URL', 'DAV_DISCOVERY_URL', 'DAV_CARD_DISCOVERY_URL'] },
   { short: 'Accès et support', title: 'Domaines acceptés et contact support', lead: 'Qui peut utiliser le configurateur, et comment vos clients vous joignent en cas de besoin.', keys: ['ALLOWED_DOMAINS', 'SUPPORT_PHONE', 'SUPPORT_EMAIL', 'SUPPORT_HOURS', 'SUPPORT_ADDRESS'] },
   { short: 'Récapitulatif', title: 'Vérifiez, puis mettez en ligne', lead: 'Rien n’est encore enregistré. « Mettre en ligne » applique ces réglages tout de suite au site client.', keys: [] },
 ];
@@ -224,7 +334,8 @@ function startWizard() {
   wiz.step = 0; wiz.max = 0; wiz.finished = false; wiz.started = true;
   wiz.ctrls = new Map();
   const root = $('#wizard');
-  const onChange = () => paintWizard();
+  const getResolver = () => resolver(entries(wiz.ctrls));
+  const onChange = (c) => { followManualUrl(wiz.ctrls, c, getResolver); paintWizard(); };
   for (const s of STEPS) for (const k of s.keys) {
     const f = byKey.get(k);
     if (!f) continue;
@@ -237,6 +348,11 @@ function startWizard() {
 
   wiz.preview = brandPreview();
   wiz.dav = davPreview();
+  wiz.detect = davDetect(wiz.ctrls, getResolver, () => paintWizard());
+  const davAdv = h('details', { class: 'adv' },
+    h('summary', {}, h('span', { text: 'Avancé' }), h('span', { class: 'adv-hint', text: ' : adresses à saisir ou corriger à la main' })),
+    h('div', { class: 'adv-body' }, C('DAV_BASE_URL'), C('DAV_DISCOVERY_URL'), C('DAV_CARD_DISCOVERY_URL')));
+  wiz.detect.setAdvanced(davAdv);
   wiz.advice = whitelistAdvice();
   wiz.recap = h('div', { class: 'recap' });
   wiz.banner = h('div', { class: 'wiz-banner', hidden: true });
@@ -244,7 +360,7 @@ function startWizard() {
   const bodies = [
     h('div', { class: 'wiz-brand' }, h('div', { class: 'wiz-col' }, C('BRAND_NAME'), C('BRAND_LOGO_URL'), C('BRAND_ACCENT'), C('BRAND_BACKGROUND')), h('div', { class: 'wiz-aside' }, wiz.preview.node)),
     h('div', {}, C('MAIL_HOST'), h('div', { class: 'srv-grid' }, serverBlock('imap', wiz.ctrls, resolve), serverBlock('smtp', wiz.ctrls, resolve)), C('WEBMAIL_URL'), wiz.advice.node),
-    h('div', {}, C('DAV_PRESET'), C('DAV_BASE_URL'), wiz.dav.node),
+    h('div', {}, wiz.detect.node, wiz.dav.node, davAdv),
     h('div', {}, C('ALLOWED_DOMAINS'), h('h3', { class: 'wiz-sub', text: 'Contact support' }), h('p', { class: 'wiz-sub-lead', text: 'Affiché à vos clients s’ils ont besoin d’aide. Tout est facultatif : un champ vide n’apparaît pas.' }), h('div', { class: 'grid-2' }, C('SUPPORT_PHONE'), C('SUPPORT_EMAIL'), C('SUPPORT_HOURS'), C('SUPPORT_ADDRESS'))),
     h('div', {}, wiz.banner, wiz.recap),
   ];
@@ -275,6 +391,7 @@ function paintWizard() {
   const r = applyHints(wiz.ctrls);
   wiz.preview.update(r.resolve, (fieldMap().get('BRAND_LOGO_URL') || {}).effective);
   wiz.dav.update(r.resolve);
+  wiz.detect.update(r);
   wiz.advice.update(r.resolve);
   return r;
 }
@@ -307,6 +424,7 @@ function goStep(i, focus) {
   wiz.next.disabled = last && !state.writable;
   const r = paintWizard();
   if (last) renderRecap(r.resolve);
+  if (STEPS[i].keys.includes('DAV_DISCOVERY_URL')) wiz.detect.auto();
   if (focus) {
     $('#wiz-h-' + i).focus({ preventScroll: true });
     wiz.stepper.scrollIntoView({ block: 'start', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
@@ -397,7 +515,7 @@ function showWizardDone() {
 const SECTIONS = [
   { group: 'brand', title: 'Marque', lead: 'Le nom, le logo et les couleurs de la page que voient vos clients.' },
   { group: 'servers', title: 'Serveurs mail', lead: 'Les serveurs auxquels les applications de vos clients se connectent, et les adresses autorisées.' },
-  { group: 'dav', title: 'Calendrier et contacts', lead: 'Les adresses de synchronisation de l’agenda (CalDAV) et des contacts (CardDAV).' },
+  { group: 'dav', title: 'Calendrier et contacts', lead: 'Les adresses de synchronisation de l’agenda (CalDAV) et des contacts (CardDAV), détectées sur votre serveur.' },
   { group: 'public', title: 'Adresse publique', lead: 'L’adresse de ce configurateur, utilisée dans les liens et QR codes envoyés à vos clients.' },
   { group: 'support', title: 'Contact support', lead: 'Les coordonnées montrées à vos clients s’ils ont besoin d’aide. Tout est facultatif : un champ vide n’apparaît pas.' },
   { group: 'profile', title: 'Profil Apple', lead: 'Le profil installe d’un coup la messagerie, l’agenda et les contacts sur iPhone, iPad et Mac.' },
@@ -423,9 +541,10 @@ function rebuildSettings() {
   set.ctrls = new Map();
   set.sections = [];
   set.updaters = [];
-  const resolve = () => resolver(entries(set.ctrls)).resolve;
+  const getResolver = () => resolver(entries(set.ctrls));
+  const resolve = () => getResolver().resolve;
   for (const f of state.fields) {
-    const c = createControl(f, { meta: true, upload, onChange: () => paintSettings(), onReset: resetField });
+    const c = createControl(f, { meta: true, upload, onChange: (ctrl) => { followManualUrl(set.ctrls, ctrl, getResolver); paintSettings(); }, onReset: resetField });
     if (!state.writable) c.setReadOnly(true);
     set.ctrls.set(f.key, c);
   }
@@ -444,10 +563,17 @@ function rebuildSettings() {
       body = h('div', {}, take('MAIL_HOST'), h('div', { class: 'srv-grid' }, serverBlock('imap', set.ctrls, resolve), serverBlock('smtp', set.ctrls, resolve)), take('WEBMAIL_URL'), take('ALLOWED_DOMAINS'), keys.map(take));
     } else if (s.group === 'dav') {
       const pv = davPreview();
-      set.updaters.push((r) => pv.update(r.resolve));
-      const main = [take('DAV_PRESET'), take('DAV_BASE_URL')];
+      const det = davDetect(set.ctrls, getResolver, () => paintSettings());
+      set.updaters.push((r) => { pv.update(r.resolve); det.update(r); });
+      // Le type de serveur est déduit par la détection : jamais affiché comme une liste.
+      used.add('DAV_PRESET');
+      const first = ['DAV_BASE_URL', ...DAV_URL_KEYS].map(take);
       const rest = keys.map(take).filter(Boolean);
-      body = h('div', {}, main, pv.node, rest.length ? h('details', { class: 'adv' }, h('summary', {}, h('span', { text: 'Adresses détaillées' }), h('span', { class: 'adv-hint', text: ' : à remplir seulement si les adresses déduites ne conviennent pas' })), h('div', { class: 'adv-body' }, rest)) : null);
+      const adv = h('details', { class: 'adv' },
+        h('summary', {}, h('span', { text: 'Avancé' }), h('span', { class: 'adv-hint', text: ' : adresses à saisir ou corriger à la main' })),
+        h('div', { class: 'adv-body' }, first, rest));
+      det.setAdvanced(adv);
+      body = h('div', {}, det.node, pv.node, adv);
     } else if (s.group === 'support') {
       body = h('div', { class: 'grid-2' }, keys.map(take));
     } else {

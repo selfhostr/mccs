@@ -17,6 +17,8 @@ The first time you sign in, a five-step assistant opens: brand, mail servers (wi
 
 The server test opens a TLS connection to the host and port you typed (directly, or through `STARTTLS`), reads the greeting and checks the certificate. It sends no credentials.
 
+At the calendar and contacts step, mccs looks for the CalDAV and CardDAV addresses of your server by itself (DNS, then `/.well-known`) and fills them in; "Détecter automatiquement" runs it again, for example after changing the server under "Avancé". There is no server type to choose: MDaemon is recognised, anything else is treated as a standard server. See [Configuration](configuration.md#automatic-detection).
+
 ## Tabs
 
 - **Réglages**: every setting, grouped as in [Configuration](configuration.md). Each field shows where its value comes from (default, `.env` or saved here) and can go back to its default. "Annuler la dernière modification" restores the previous `config.json`.

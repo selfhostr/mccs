@@ -30,7 +30,7 @@ Open http://localhost:8080 and try the wizard with an address on your domain. Se
 - **Phone handoff.** QR code on a computer to continue on a phone.
 - **Admin area.** Internal `/support` (sign-in with a session limited to `/support`): setup assistant, every setting, logo and background upload, server test, and a link generator for one customer with a QR code (PNG or SVG).
 - **White-label.** Name, logo, accent colour, servers and support contact come from environment variables.
-- **Presets.** `mdaemon` (default) or `generic` (standard `.well-known` discovery), with URL templates to override either.
+- **Any CalDAV/CardDAV server.** The admin detects the calendar and contacts addresses itself (DNS `SRV`, then `.well-known`, as clients do) and recognises MDaemon; every URL can still be overridden.
 - **Light and dark.** Follows the system, mobile friendly, strict Content-Security-Policy.
 
 ## Architecture
@@ -42,7 +42,7 @@ One Node 22 process using only the built-in `http` module, with no npm dependenc
 - The interface and the guides are in French; translating means editing `public/js/guides.js`, `public/js/app.js` and the HTML files.
 - The Apple profile is not signed, so iOS and macOS show "Not signed" when installing it.
 - The guides describe third-party apps as they look today; a new app version can make a step out of date.
-- It does not check that your mail server answers, and the `generic` preset has had less use than `mdaemon`.
+- The detection works without credentials, so it finds each server's discovery address, not each customer's personal calendar URL; the apps find the rest. MDaemon has had the most use; other servers have been checked against public providers only.
 - Behind a reverse proxy, set `TRUSTED_PROXY_HEADER` (`CF-Connecting-IP` or `X-Forwarded-For`) so the `/support` lock-out sees real client addresses; otherwise all clients share the proxy's address.
 - Early: variable names and endpoints can still change before 1.0. No published image yet.
 

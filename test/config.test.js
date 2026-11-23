@@ -54,6 +54,50 @@ test('le préréglage generic change les URL DAV non surchargées', () => {
   assert.match(config.caldavUrl, /\/\.well-known\/caldav$/);
 });
 
+test('sans DAV_PRESET, les URL MDaemon restent exactement celles d’avant (compatibilité)', () => {
+  const { config } = createSettings({ env: { MAIL_HOST: 'mail.a.example' }, dir: tmp() });
+  const B = 'https://mail.a.example';
+  assert.equal(config.davPreset, 'mdaemon');
+  assert.equal(config.caldavUrl, B + '/webdav/calendar');
+  assert.equal(config.carddavUrl, B + '/webdav/addressbook');
+  assert.equal(config.tasksUrl, B + '/webdav/tasklist');
+  assert.equal(config.davDiscoveryUrl, B + '/.well-known/caldav');
+  assert.equal(config.davCardDiscoveryUrl, B + '/.well-known/carddav');
+  assert.deepEqual(config.davTemplates, {
+    principal: B + '/webdav/principals/{email}/',
+    calendar: B + '/webdav/caldav/{domain}/{local}/b64=Q2FsZW5kYXI/',
+    tasks: B + '/webdav/caldav/{domain}/{local}/b64=VGFza3M/',
+    contacts: B + '/webdav/carddav/{domain}/{local}/b64=Q29udGFjdHM/',
+  });
+});
+
+test('generic sans URL découverte : toutes les adresses restent /.well-known (comme avant)', () => {
+  const { config } = createSettings({ env: { MAIL_HOST: 'mail.a.example', DAV_PRESET: 'generic' }, dir: tmp() });
+  const cal = 'https://mail.a.example/.well-known/caldav';
+  const card = 'https://mail.a.example/.well-known/carddav';
+  assert.deepEqual([config.caldavUrl, config.carddavUrl, config.tasksUrl], [cal, card, cal]);
+  assert.deepEqual(config.davTemplates, { principal: cal, calendar: cal, tasks: cal, contacts: card });
+});
+
+test('generic : les URL découvertes (DAV_DISCOVERY_URL…) deviennent les adresses de l’agenda et des contacts', () => {
+  const { config, settings } = createSettings({ env: { MAIL_HOST: 'mail.a.example' }, dir: tmp() });
+  assert.deepEqual(settings.save({
+    DAV_PRESET: 'generic',
+    DAV_DISCOVERY_URL: 'https://dav.a.example/dav/calendars',
+    DAV_CARD_DISCOVERY_URL: 'https://dav.a.example/dav/addressbooks',
+  }), { ok: true });
+  const cal = 'https://dav.a.example/dav/calendars';
+  const card = 'https://dav.a.example/dav/addressbooks';
+  assert.deepEqual([config.caldavUrl, config.carddavUrl, config.tasksUrl], [cal, card, cal]);
+  assert.deepEqual(config.davTemplates, { principal: cal, calendar: cal, tasks: cal, contacts: card });
+});
+
+test('mdaemon : une URL de découverte modifiée ne change pas les gabarits MDaemon', () => {
+  const { config, settings } = createSettings({ env: { MAIL_HOST: 'mail.a.example' }, dir: tmp() });
+  settings.save({ DAV_DISCOVERY_URL: 'https://mail.a.example/webdav/principals/' });
+  assert.equal(config.davTemplates.calendar, 'https://mail.a.example/webdav/caldav/{domain}/{local}/b64=Q2FsZW5kYXI/');
+});
+
 test('onChange est appelé une fois par enregistrement réussi', () => {
   const { settings } = createSettings({ env: {}, dir: tmp() });
   let n = 0;

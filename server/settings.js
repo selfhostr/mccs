@@ -24,13 +24,14 @@ const FIELDS = [
   { key: 'WEBMAIL_URL', group: 'servers', label: 'Adresse du webmail', type: 'url' },
   { key: 'ALLOWED_DOMAINS', group: 'servers', label: 'Domaines acceptés', type: 'domains' },
   // Calendrier et contacts
-  { key: 'DAV_PRESET', group: 'dav', label: 'Type de serveur', type: 'preset', options: PRESETS },
+  // Déduit par la détection automatique de l'admin (jamais présenté comme une liste) ; accepté dans le .env.
+  { key: 'DAV_PRESET', group: 'dav', label: 'Type de serveur', type: 'preset', options: PRESETS, detected: true },
   { key: 'DAV_BASE_URL', group: 'dav', label: 'URL de base', type: 'url' },
   { key: 'CALDAV_URL', group: 'dav', label: 'URL de l’agenda', type: 'url' },
   { key: 'CARDDAV_URL', group: 'dav', label: 'URL des contacts', type: 'url' },
   { key: 'TASKS_URL', group: 'dav', label: 'URL des tâches', type: 'url' },
-  { key: 'DAV_DISCOVERY_URL', group: 'dav', label: 'URL de découverte (agenda)', type: 'url' },
-  { key: 'DAV_CARD_DISCOVERY_URL', group: 'dav', label: 'URL de découverte (contacts)', type: 'url' },
+  { key: 'DAV_DISCOVERY_URL', group: 'dav', label: 'Agenda : URL de découverte (CalDAV)', type: 'url' },
+  { key: 'DAV_CARD_DISCOVERY_URL', group: 'dav', label: 'Contacts : URL de découverte (CardDAV)', type: 'url' },
   { key: 'DAV_PRINCIPAL_URL_TEMPLATE', group: 'dav', label: 'Gabarit : compte', type: 'template' },
   { key: 'DAV_CALENDAR_URL_TEMPLATE', group: 'dav', label: 'Gabarit : agenda personnel', type: 'template' },
   { key: 'DAV_TASKS_URL_TEMPLATE', group: 'dav', label: 'Gabarit : tâches personnelles', type: 'template' },
