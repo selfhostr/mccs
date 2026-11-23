@@ -82,3 +82,33 @@ test('téléphone : formats usuels de tous pays acceptés, lettres et caractère
   // La valeur est validée telle quelle (sans retirer d'abord les caractères de contrôle en fin de chaîne).
   for (const v of INVALID) assert.equal(typeof validateValues({ SUPPORT_PHONE: v }).SUPPORT_PHONE, 'string', JSON.stringify(v));
 });
+
+test('test de connexion : interrupteur « true » ou « false », désactivé par défaut', () => {
+  assert.deepEqual(validateValues({ CONNECTION_TEST: 'true' }), {});
+  assert.deepEqual(validateValues({ CONNECTION_TEST: 'false' }), {});
+  for (const bad of ['yes', '1', 'on', 'TRUE ', 'vrai']) assert.ok(validateValues({ CONNECTION_TEST: bad }).CONNECTION_TEST, bad);
+  const f = FIELDS.find((x) => x.key === 'CONNECTION_TEST');
+  assert.equal(f.type, 'toggle');
+});
+
+test('test de connexion : limites d’essais entières et raisonnables', () => {
+  assert.deepEqual(validateValues({ CONNECTION_TEST_MAX_PER_EMAIL: '5', CONNECTION_TEST_MAX_PER_IP: '200' }), {});
+  for (const bad of ['0', '-1', '2.5', 'abc', '10001']) {
+    assert.ok(validateValues({ CONNECTION_TEST_MAX_PER_EMAIL: bad }).CONNECTION_TEST_MAX_PER_EMAIL, bad);
+    assert.ok(validateValues({ CONNECTION_TEST_MAX_PER_IP: bad }).CONNECTION_TEST_MAX_PER_IP, bad);
+  }
+});
+
+test('messages d’aide : un réglage par statut et par service, texte libre sur plusieurs lignes', () => {
+  const keys = FIELDS.filter((f) => f.type === 'message').map((f) => f.key);
+  for (const s of ['OK', 'AUTH_FAILED', 'BLOCKED', 'UNREACHABLE', 'TLS_ERROR', 'TIMEOUT', 'ERROR']) {
+    assert.ok(keys.includes('TEST_MSG_IMAP_' + s), s);
+    assert.ok(keys.includes('TEST_MSG_SMTP_' + s), s);
+  }
+  assert.ok(keys.includes('TEST_MSG_SMTP_SKIPPED'));
+  assert.ok(keys.includes('TEST_MSG_RATE_LIMITED'));
+  assert.ok(keys.includes('TEST_MSG_DOMAIN'));
+  assert.deepEqual(validateValues({ TEST_MSG_IMAP_AUTH_FAILED: 'Mot de passe refusé.\nRéessayez.' }), {});
+  assert.ok(validateValues({ TEST_MSG_IMAP_AUTH_FAILED: 'a\u0000b' }).TEST_MSG_IMAP_AUTH_FAILED);
+  assert.ok(validateValues({ TEST_MSG_IMAP_AUTH_FAILED: 'x'.repeat(501) }).TEST_MSG_IMAP_AUTH_FAILED);
+});

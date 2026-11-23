@@ -3,6 +3,7 @@
 // Schéma des réglages modifiables (dans l'admin ou dans /data/config.json).
 // Chaque clé porte le nom de la variable d'environnement correspondante.
 const { normalizeEmail } = require('./validate');
+const { messageFields } = require('./messages');
 
 const SECURITY = ['SSL/TLS', 'STARTTLS'];
 const PRESETS = ['mdaemon', 'generic'];
@@ -23,6 +24,10 @@ const FIELDS = [
   { key: 'SMTP_SECURITY', group: 'servers', label: 'Sécurité d’envoi', type: 'security', options: SECURITY },
   { key: 'WEBMAIL_URL', group: 'servers', label: 'Adresse du webmail', type: 'url' },
   { key: 'ALLOWED_DOMAINS', group: 'servers', label: 'Domaines acceptés', type: 'domains' },
+  // Vérification du mot de passe par le client (POST /api/test), désactivée par défaut.
+  { key: 'CONNECTION_TEST', group: 'test', label: 'Vérifier le mot de passe des clients', type: 'toggle' },
+  { key: 'CONNECTION_TEST_MAX_PER_EMAIL', group: 'test', label: 'Essais par adresse e-mail (15 minutes)', type: 'count' },
+  { key: 'CONNECTION_TEST_MAX_PER_IP', group: 'test', label: 'Essais par adresse IP (15 minutes)', type: 'count' },
   // Calendrier et contacts
   // Déduit par la détection automatique de l'admin (jamais présenté comme une liste) ; accepté dans le .env.
   { key: 'DAV_PRESET', group: 'dav', label: 'Type de serveur', type: 'preset', options: PRESETS, detected: true },
@@ -46,6 +51,8 @@ const FIELDS = [
   // Profil Apple
   { key: 'PROFILE_ORGANIZATION', group: 'profile', label: 'Organisation', type: 'text' },
   { key: 'PROFILE_ID_PREFIX', group: 'profile', label: 'Préfixe d’identifiant', type: 'reverse-dns' },
+  // Messages d'aide du test de connexion (server/messages.js)
+  ...messageFields(),
 ];
 
 // Réglages qui ne se changent que dans l'environnement (jamais depuis l'admin).
@@ -90,6 +97,10 @@ function isHttpUrl(v) {
 
 const CHECKS = {
   text: () => '',
+  toggle: (v, raw) => (raw === 'true' || raw === 'false' ? '' : 'Valeur attendue : true ou false.'),
+  count: (v) => (/^\d{1,5}$/.test(v) && +v >= 1 && +v <= 10000 ? '' : 'Nombre entier entre 1 et 10000.'),
+  // Texte affiché tel quel (jamais interprété comme du HTML) ; retours à la ligne permis.
+  message: (v, raw) => (/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/.test(raw) ? 'Caractère de contrôle refusé.' : ''),
   host: (v) => (isHost(v) ? '' : 'Nom de serveur invalide (ex. mail.example.com).'),
   port: (v) => (/^\d{1,5}$/.test(v) && +v > 0 && +v < 65536 ? '' : 'Port invalide (nombre entre 1 et 65535).'),
   security: (v) => (SECURITY.includes(v) ? '' : 'Choisissez SSL/TLS ou STARTTLS.'),

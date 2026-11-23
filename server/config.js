@@ -4,6 +4,7 @@
 // dans l'admin (/data/config.json, indexés par nom de variable). Le fichier gagne.
 const { FIELDS, validateValues, PHONE_EXT_RE } = require('./settings');
 const { createStore } = require('./store');
+const { buildMessages, effectiveMessage } = require('./messages');
 
 function httpUrl(v) {
   try {
@@ -57,6 +58,11 @@ function build(src) {
   const env = (name, def) => {
     const v = src[name];
     return v === undefined || v === '' ? def : v;
+  };
+  const bool = (name) => /^(1|true|on|yes|oui)$/i.test(String(env(name, '')).trim());
+  const count = (name, def) => {
+    const v = String(env(name, String(def))).trim();
+    return /^\d{1,5}$/.test(v) && +v >= 1 && +v <= 10000 ? +v : def;
   };
   const int = (name, def) => {
     const n = parseInt(env(name, String(def)), 10);
@@ -135,6 +141,15 @@ function build(src) {
     webmailUrl: env('WEBMAIL_URL', 'https://' + MAIL_HOST + '/'),
     // Domaines e-mail acceptés par le test de connexion (vide = tous).
     allowedDomains: env('ALLOWED_DOMAINS', '').split(',').map((d) => d.trim().toLowerCase()).filter(Boolean),
+    // Vérification du mot de passe par le client (POST /api/test) : désactivée par défaut.
+    connectionTest: bool('CONNECTION_TEST'),
+    // Essais permis par fenêtre de 15 minutes, comptés avant la connexion au serveur mail.
+    connectionTestLimits: {
+      perEmail: count('CONNECTION_TEST_MAX_PER_EMAIL', 5),
+      perIp: count('CONNECTION_TEST_MAX_PER_IP', 20),
+    },
+    // Messages montrés au client selon le résultat du test (server/messages.js).
+    testMessages: buildMessages(env),
     // Adresse publique du configurateur (liens et QR codes envoyés aux clients).
     publicUrl: httpUrl(env('PUBLIC_URL', 'https://config.example.com')),
     // Page interne /support (désactivée si SUPPORT_PASSWORD est vide).
@@ -177,7 +192,11 @@ const EFFECTIVE = {
   PUBLIC_URL: (c) => c.publicUrl, SUPPORT_PHONE: (c) => c.support.phone, SUPPORT_EMAIL: (c) => c.support.email,
   SUPPORT_HOURS: (c) => c.support.hours, SUPPORT_ADDRESS: (c) => c.support.address,
   PROFILE_ORGANIZATION: (c) => c.profile.org, PROFILE_ID_PREFIX: (c) => c.profile.idPrefix,
+  CONNECTION_TEST: (c) => String(c.connectionTest),
+  CONNECTION_TEST_MAX_PER_EMAIL: (c) => String(c.connectionTestLimits.perEmail),
+  CONNECTION_TEST_MAX_PER_IP: (c) => String(c.connectionTestLimits.perIp),
 };
+for (const f of FIELDS) if (f.type === 'message') EFFECTIVE[f.key] = (c) => effectiveMessage(c.testMessages, f);
 
 // Remplace le contenu de target par celui de next, en gardant les mêmes objets imbriqués
 // (les modules qui ont gardé une référence à config ou config.imap voient les nouvelles valeurs).
@@ -283,6 +302,8 @@ function publicConfigOf(config) {
     publicUrl: config.publicUrl,
     support: Object.assign({}, config.support, { phoneUri: telUri(config.support.phone) }),
     links: config.links,
+    connectionTest: config.connectionTest,
+    testMessages: config.testMessages,
   };
 }
 const publicConfig = () => publicConfigOf(config);

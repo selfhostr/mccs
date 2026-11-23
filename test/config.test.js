@@ -223,3 +223,36 @@ test('la configuration publique donne le lien tel: du support', () => {
   assert.equal(publicConfigOf(config).support.phoneUri, 'tel:+442079460958;ext=12');
   assert.equal(publicConfigOf(config).support.phone, '+44 20 7946 0958 ext. 12');
 });
+
+test('test de connexion : désactivé par défaut, activable par le .env ou l’admin', () => {
+  const { config, settings } = createSettings({ env: {}, dir: tmp() });
+  assert.equal(config.connectionTest, false);
+  assert.deepEqual(config.connectionTestLimits, { perEmail: 5, perIp: 20 });
+  settings.save({ CONNECTION_TEST: 'true', CONNECTION_TEST_MAX_PER_EMAIL: '3' });
+  assert.equal(config.connectionTest, true);
+  assert.equal(config.connectionTestLimits.perEmail, 3);
+  assert.equal(createSettings({ env: { CONNECTION_TEST: 'true' }, dir: tmp() }).config.connectionTest, true);
+  assert.equal(createSettings({ env: { CONNECTION_TEST: '1' }, dir: tmp() }).config.connectionTest, true);
+  const off = createSettings({ env: { CONNECTION_TEST: 'true' }, dir: tmp() });
+  off.settings.save({ CONNECTION_TEST: 'false' });
+  assert.equal(off.config.connectionTest, false);
+});
+
+test('messages du test : valeurs par défaut en français, remplaçables, exposées dans la vue publique', () => {
+  const { publicConfigOf } = require('../server/config');
+  const { config, settings } = createSettings({ env: {}, dir: tmp() });
+  assert.match(config.testMessages.imap.auth_failed, /mot de passe/i);
+  assert.ok(config.testMessages.smtp.skipped);
+  assert.ok(config.testMessages.rate_limited);
+  assert.ok(config.testMessages.domain);
+  settings.save({ TEST_MSG_IMAP_AUTH_FAILED: 'Refusé : appelez-nous.' });
+  assert.equal(config.testMessages.imap.auth_failed, 'Refusé : appelez-nous.');
+  const pub = publicConfigOf(config);
+  assert.equal(pub.connectionTest, false);
+  assert.equal(pub.testMessages.imap.auth_failed, 'Refusé : appelez-nous.');
+  assert.equal(pub.connectionTestLimits, undefined);
+  const by = Object.fromEntries(settings.describe().map((f) => [f.key, f]));
+  assert.equal(by.TEST_MSG_SMTP_OK.source, 'default');
+  assert.equal(by.TEST_MSG_SMTP_OK.effective, config.testMessages.smtp.ok);
+  assert.equal(by.CONNECTION_TEST.effective, 'false');
+});
