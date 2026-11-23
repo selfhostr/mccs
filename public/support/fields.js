@@ -36,10 +36,10 @@ export const HELP = {
   DAV_TASKS_URL_TEMPLATE: 'Variables possibles : {email}, {local} et {domain}.',
   DAV_CONTACTS_URL_TEMPLATE: 'Variables possibles : {email}, {local} et {domain}.',
   PUBLIC_URL: 'L’adresse de ce configurateur, telle que vos clients la voient. Elle sert aux liens et QR codes que vous leur envoyez.',
-  SUPPORT_PHONE: 'Format international conseillé, par exemple +41 21 555 01 00.',
+  SUPPORT_PHONE: 'Tel que vos clients doivent le composer. Ajoutez l’indicatif du pays (+…) si certains appellent de l’étranger, et le poste éventuel, par exemple +1 555 010 0100 ext. 12.',
   SUPPORT_HOURS: 'Par exemple : du lundi au vendredi, de 8 h à 17 h.',
   PROFILE_ORGANIZATION: 'Le nom affiché sur l’iPhone, l’iPad ou le Mac quand le client installe le profil.',
-  PROFILE_ID_PREFIX: 'Un identifiant technique, écrit comme un nom de domaine à l’envers (par exemple ch.example.mail). Évitez de le changer : les appareils s’en servent pour reconnaître le profil.',
+  PROFILE_ID_PREFIX: 'Un identifiant technique, écrit comme un nom de domaine à l’envers (par exemple com.example.mail). Évitez de le changer : les appareils s’en servent pour reconnaître le profil.',
 };
 
 const OPTION_LABELS = {
@@ -64,6 +64,23 @@ const COLOR_RE = new RegExp('^' + HEX + '$', 'i');
 const BACKGROUND_RE = new RegExp('^(?:' + HEX + '(?:,' + HEX + ')?|/uploads/[a-z0-9-]+\\.(?:png|jpe?g|webp))$', 'i');
 const LOGO_PATH_RE = /^\/(?:img|uploads)\/[A-Za-z0-9._/-]+\.(?:svg|png|jpe?g|webp)$/;
 const EMAIL_RE = /^[A-Za-z0-9!#$%&'*+/=?^_`{|}~.-]{1,64}@[A-Za-z0-9.-]+\.[A-Za-z]{2,63}$/;
+// Téléphone, tous pays : + en tête facultatif, chiffres, espaces (y compris insécables), ( ) . / -,
+// puis un poste facultatif (« ext. 12 », « x 12 », « poste 12 », « #12 »). De 3 à 17 chiffres hors poste ;
+// lettres et caractères de contrôle refusés.
+const PHONE_RE = /^\+?[0-9(][0-9   ().\/-]*?(?:[   ]*(?:ext\.?|x|poste|#)[   ]*[0-9]{1,6})?$/i;
+const PHONE_EXT_RE = /[   ]*(?:ext\.?|x|poste|#)[   ]*[0-9]{1,6}$/i;
+function isPhone(raw) {
+  const v = String(raw).trim();
+  if (/[\u0000-\u001f\u007f-\u009f]/.test(raw) || v.length > 40 || !PHONE_RE.test(v)) return false;
+  const main = v.replace(PHONE_EXT_RE, '');
+  const digits = main.replace(/\D/g, '').length;
+  let depth = 0;
+  for (const ch of main) {
+    if (ch === '(') depth++;
+    if (ch === ')' && --depth < 0) return false;
+  }
+  return depth === 0 && digits >= 3 && digits <= 17;
+}
 export const isHost = (v) => v.length <= 253 && v.split('.').length >= 2 && v.split('.').every((l) => LABEL_RE.test(l));
 const isHttpUrl = (v) => {
   try { const u = new URL(v); return (u.protocol === 'https:' || u.protocol === 'http:') && Boolean(u.hostname); } catch { return false; }
@@ -77,7 +94,7 @@ const CHECKS = {
   background: (v) => (BACKGROUND_RE.test(v) ? '' : 'Fond invalide : une couleur #rrggbb, deux couleurs ou une image envoyée.'),
   logo: (v) => (LOGO_PATH_RE.test(v) || isHttpUrl(v) ? '' : 'Logo invalide : une image envoyée ou une adresse https://.'),
   email: (v) => (EMAIL_RE.test(v) ? '' : 'Adresse e-mail invalide.'),
-  phone: (v) => (/^[+\d][\d .()/-]{2,30}$/.test(v) ? '' : 'Numéro de téléphone invalide.'),
+  phone: (v, raw) => (isPhone(raw) ? '' : 'Numéro de téléphone invalide : des chiffres, avec + et l’indicatif du pays si besoin (ex. +1 555 010 0100, poste « ext. 12 »).'),
   'reverse-dns': (v) => (/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(v) ? '' : 'Format attendu : com.example.mailsetup.'),
   domains: (v) => {
     const bad = v.split(',').map((s) => s.trim()).filter((d) => d && !isHost(d));
@@ -85,9 +102,10 @@ const CHECKS = {
   },
 };
 export function check(type, value) {
-  const v = String(value || '').trim();
+  const raw = String(value || '');
+  const v = raw.trim();
   if (!v || v.length > 500) return v.length > 500 ? 'Valeur trop longue (500 caractères au maximum).' : '';
-  return CHECKS[type] ? CHECKS[type](v) : '';
+  return CHECKS[type] ? CHECKS[type](v, raw) : '';
 }
 
 /* ---------- Valeurs déduites (même logique que server/config.js) ---------- */

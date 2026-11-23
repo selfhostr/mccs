@@ -19,6 +19,7 @@ All notable changes to mccs. The format follows [Keep a Changelog](https://keepa
 - `/support` uses a sign-in form and a session instead of HTTP Basic.
 - The project is now `mccs` (Mail, Calendar, Contacts Setup) and lives at `github.com/selfhostr/mccs`.
 - README and documentation follow the same layout as the other selfhostr projects.
+- Usable outside Switzerland: `SUPPORT_PHONE` accepts the usual formats of any country (country code, parentheses, dots, dashes, an extension such as `ext. 12`) and refuses letters and control characters, with the same rule in the browser and on the server; the call link carries the extension (`tel:…;ext=12`). Pages are marked `lang="fr"` instead of `fr-CH`, and examples are neutral (`example.com`, `+1 555 010 0100`, `com.example.mail`).
 - The "Type de serveur" list (MDaemon / other) is gone from the admin: `DAV_PRESET` is now set by the detection (still accepted in `.env`, default unchanged). With `DAV_PRESET=generic`, the calendar, tasks and contacts URLs follow `DAV_DISCOVERY_URL` and `DAV_CARD_DISCOVERY_URL` (unchanged when those are not set).
 - The "Liens clients" tab no longer prepares an email or SMS (buttons, mobile number field and message texts removed): it gives the link to copy and the QR code (PNG or SVG) only.
 - Inter (text) and JetBrains Mono (code, identifiers, numbers), self-hosted under `public/fonts` with their SIL OFL 1.1 licences, replace the system font stacks. No third-party request is made for fonts.

@@ -206,3 +206,20 @@ test('ALLOWED_DOMAINS donne config.allowedDomains (minuscules, sans espaces ; vi
   const empty = createSettings({ env: {}, dir: tmp() });
   assert.deepEqual(empty.config.allowedDomains, []);
 });
+
+test('lien tel: du support : chiffres seuls, + conservé, poste en ;ext= (RFC 3966)', () => {
+  const { telUri } = require('../server/config');
+  assert.equal(telUri('+33 1 23 45 67 89'), 'tel:+33123456789');
+  assert.equal(telUri('(022) 123 45 67'), 'tel:0221234567');
+  assert.equal(telUri('+1 (555) 010-0100'), 'tel:+15550100100');
+  assert.equal(telUri('+44 20 7946 0958 ext. 12'), 'tel:+442079460958;ext=12');
+  assert.equal(telUri('01 23 45 67 89 poste 204'), 'tel:0123456789;ext=204');
+  assert.equal(telUri(''), '');
+});
+
+test('la configuration publique donne le lien tel: du support', () => {
+  const { createSettings: cs, publicConfigOf } = require('../server/config');
+  const { config } = cs({ env: { SUPPORT_PHONE: '+44 20 7946 0958 ext. 12' }, dir: tmp() });
+  assert.equal(publicConfigOf(config).support.phoneUri, 'tel:+442079460958;ext=12');
+  assert.equal(publicConfigOf(config).support.phone, '+44 20 7946 0958 ext. 12');
+});

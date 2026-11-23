@@ -52,6 +52,7 @@ The compose file mounts the `mccs-data` volume on `/data`. Without a writable `/
 - `BRAND_ACCENT`: `#rgb` or `#rrggbb`, served through the generated `/brand.css`. It is the colour of buttons and main surfaces with white text on top, so choose one that keeps a contrast of at least 4.5:1 with white.
 - `BRAND_LOGO_URL`: a local path such as `/img/logo.svg` (file baked into the image or mounted under `public/img`), or an absolute https URL. For a remote URL its origin is added to the CSP `img-src` automatically. Empty gives the text name and a neutral icon.
 - `SUPPORT_PHONE`, `SUPPORT_EMAIL`, `SUPPORT_HOURS`, `SUPPORT_ADDRESS`: shown to users, each hidden when empty.
+- `SUPPORT_PHONE` accepts the usual formats of any country, written as your customers dial it: an optional leading `+` with the country code, digits, spaces (non-breaking ones too), `( ) . / -`, and an optional extension at the end (`ext. 12`, `x 12`, `poste 12`, `#12`). For example `+33 1 23 45 67 89`, `(022) 123 45 67`, `+1 (555) 010-0100`, `0800 123 456` or `+44 20 7946 0958 ext. 12`. Letters (other than the extension marker) and control characters are refused. The call link is built as `tel:+442079460958;ext=12` (RFC 3966).
 
 ## Servers
 

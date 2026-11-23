@@ -59,6 +59,24 @@ const COLOR_RE = new RegExp('^' + HEX + '$', 'i');
 const BACKGROUND_RE = new RegExp('^(?:' + HEX + '(?:,' + HEX + ')?|/uploads/[a-z0-9-]+\\.(?:png|jpe?g|webp))$', 'i');
 const LOGO_PATH_RE = /^\/(?:img|uploads)\/[A-Za-z0-9._/-]+\.(?:svg|png|jpe?g|webp)$/;
 
+// Téléphone, tous pays : + en tête facultatif, chiffres, espaces (y compris insécables), ( ) . / -,
+// puis un poste facultatif (« ext. 12 », « x 12 », « poste 12 », « #12 »). De 3 à 17 chiffres hors poste ;
+// lettres et caractères de contrôle refusés.
+const PHONE_RE = /^\+?[0-9(][0-9   ().\/-]*?(?:[   ]*(?:ext\.?|x|poste|#)[   ]*[0-9]{1,6})?$/i;
+const PHONE_EXT_RE = /[   ]*(?:ext\.?|x|poste|#)[   ]*[0-9]{1,6}$/i;
+function isPhone(raw) {
+  const v = String(raw).trim();
+  if (/[\u0000-\u001f\u007f-\u009f]/.test(raw) || v.length > 40 || !PHONE_RE.test(v)) return false;
+  const main = v.replace(PHONE_EXT_RE, '');
+  const digits = main.replace(/\D/g, '').length;
+  let depth = 0;
+  for (const ch of main) {
+    if (ch === '(') depth++;
+    if (ch === ')' && --depth < 0) return false;
+  }
+  return depth === 0 && digits >= 3 && digits <= 17;
+}
+
 function isHost(v) {
   const labels = v.split('.');
   return v.length <= 253 && labels.length >= 2 && labels.every((l) => LABEL_RE.test(l));
@@ -82,8 +100,8 @@ const CHECKS = {
   background: (v) => (BACKGROUND_RE.test(v) ? '' : 'Fond invalide : une couleur #rrggbb, deux couleurs « #a,#b » ou une image envoyée.'),
   logo: (v) => (LOGO_PATH_RE.test(v) || isHttpUrl(v) ? '' : 'Logo invalide : une image envoyée ou une adresse https://.'),
   email: (v) => (normalizeEmail(v) ? '' : 'Adresse e-mail invalide.'),
-  phone: (v) => (/^[+\d][\d .()/-]{2,30}$/.test(v) ? '' : 'Numéro de téléphone invalide.'),
-  // Liste « a.ch, b.fr » ; vide = tous les domaines.
+  phone: (v, raw) => (isPhone(raw) ? '' : 'Numéro de téléphone invalide : des chiffres, avec + et l’indicatif du pays si besoin (ex. +1 555 010 0100, poste « ext. 12 »).'),
+  // Liste « example.com, example.org » ; vide = tous les domaines.
   domains: (v) => (v.split(',').every((d) => isHost(d.trim())) ? '' : 'Liste invalide : des domaines séparés par des virgules (ex. example.com, example.org).'),
   'reverse-dns': (v) => (/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(v) ? '' : 'Format attendu : com.example.mailsetup.'),
 };
@@ -101,10 +119,10 @@ function validateValues(values) {
     if (raw.length > MAX_LEN) { errors[key] = `Valeur trop longue (${MAX_LEN} caractères au maximum).`; continue; }
     const v = raw.trim();
     if (v === '') continue;
-    const msg = CHECKS[field.type](v);
+    const msg = CHECKS[field.type](v, raw);
     if (msg) errors[key] = msg;
   }
   return Object.fromEntries(Object.entries(errors));
 }
 
-module.exports = { FIELDS, ENV_ONLY, validateValues, isHost };
+module.exports = { FIELDS, ENV_ONLY, validateValues, isHost, isPhone, PHONE_EXT_RE };

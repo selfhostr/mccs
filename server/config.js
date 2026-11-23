@@ -2,7 +2,7 @@
 
 // Configuration : valeurs intégrées, puis variables d'environnement, puis réglages modifiés
 // dans l'admin (/data/config.json, indexés par nom de variable). Le fichier gagne.
-const { FIELDS, validateValues } = require('./settings');
+const { FIELDS, validateValues, PHONE_EXT_RE } = require('./settings');
 const { createStore } = require('./store');
 
 function httpUrl(v) {
@@ -20,6 +20,16 @@ function davUrl(template, email) {
   const domain = email.slice(at + 1).toLowerCase();
   const enc = (s) => encodeURIComponent(s).replace(/%40/g, '@');
   return template.replace(/\{email\}/g, enc(local + '@' + domain)).replace(/\{local\}/g, enc(local)).replace(/\{domain\}/g, enc(domain));
+}
+
+// Lien tel: (RFC 3966) d'un numéro déjà validé : chiffres et + de tête, poste en « ;ext= ».
+function telUri(phone) {
+  const v = String(phone || '').trim();
+  if (!v) return '';
+  const ext = PHONE_EXT_RE.exec(v);
+  const main = ext ? v.slice(0, ext.index) : v;
+  const number = (main.trim().startsWith('+') ? '+' : '') + main.replace(/\D/g, '');
+  return 'tel:' + number + (ext ? ';ext=' + ext[0].replace(/\D/g, '') : '');
 }
 
 // Couleur d'accent : uniquement #rgb ou #rrggbb (injectée dans /brand.css).
@@ -255,7 +265,7 @@ const DATA_DIR = process.env.DATA_DIR || '/data';
 const { config, settings } = createSettings({ env: process.env, dir: DATA_DIR });
 
 // Vue publique transmise au navigateur (aucune donnée sensible).
-function publicConfig() {
+function publicConfigOf(config) {
   return {
     brand: config.brand,
     brandLogoUrl: config.brandLogoUrl,
@@ -271,11 +281,12 @@ function publicConfig() {
     davTemplates: config.davTemplates,
     webmailUrl: config.webmailUrl,
     publicUrl: config.publicUrl,
-    support: config.support,
+    support: Object.assign({}, config.support, { phoneUri: telUri(config.support.phone) }),
     links: config.links,
   };
 }
+const publicConfig = () => publicConfigOf(config);
 
 
 
-module.exports = { config, settings, publicConfig, davUrl, createSettings, DATA_DIR };
+module.exports = { config, settings, publicConfig, publicConfigOf, telUri, davUrl, createSettings, DATA_DIR };

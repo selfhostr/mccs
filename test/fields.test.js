@@ -38,3 +38,16 @@ test('presetFor : le type de serveur se déduit d’une adresse saisie à la mai
   assert.equal(presetFor('https://mail.a.example/webdav/calendar'), 'mdaemon');
   assert.equal(presetFor('https://cloud.a.example/remote.php/dav/'), 'generic');
 });
+
+test('téléphone : même règle dans le navigateur que sur le serveur', async () => {
+  const { check } = await load();
+  const { VALID, INVALID } = require('./helpers/phones');
+  for (const v of VALID) assert.equal(check('phone', v), '', JSON.stringify(v));
+  for (const v of INVALID) assert.notEqual(check('phone', v), '', JSON.stringify(v));
+});
+
+test('aide du téléphone : exemple neutre, sans indicatif suisse', async () => {
+  const { HELP } = await load();
+  assert.doesNotMatch(HELP.SUPPORT_PHONE, /\+41/);
+  assert.doesNotMatch(HELP.PROFILE_ID_PREFIX, /\bch\./);
+});

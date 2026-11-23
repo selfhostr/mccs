@@ -490,7 +490,8 @@ function applyConfigToStatic() {
   const c = state.cfg;
   const sup = c.support || {};
   const show = (el, on) => { if (el) el.hidden = !on; };
-  const tel = 'tel:' + String(sup.phone || '').replace(/[^+\d]/g, '');
+  // Lien tel: calculé par le serveur (poste en « ;ext= ») ; repli pour une configuration plus ancienne.
+  const tel = sup.phoneUri || 'tel:' + String(sup.phone || '').replace(/[^+\d]/g, '');
   document.querySelectorAll('.js-brand-name').forEach((e) => { e.textContent = c.brand; });
   document.querySelectorAll('.js-org').forEach((e) => { e.textContent = c.organization || c.brand; });
   const logo = c.brandLogoUrl;

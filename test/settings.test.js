@@ -75,3 +75,10 @@ test('domaines acceptés : liste séparée par des virgules, vide = tous', () =>
   assert.equal(f.group, 'servers');
   assert.equal(f.type, 'domains');
 });
+
+test('téléphone : formats usuels de tous pays acceptés, lettres et caractères de contrôle refusés', () => {
+  const { VALID, INVALID } = require('./helpers/phones');
+  for (const v of VALID) assert.deepEqual(validateValues({ SUPPORT_PHONE: v }), {}, JSON.stringify(v));
+  // La valeur est validée telle quelle (sans retirer d'abord les caractères de contrôle en fin de chaîne).
+  for (const v of INVALID) assert.equal(typeof validateValues({ SUPPORT_PHONE: v }).SUPPORT_PHONE, 'string', JSON.stringify(v));
+});
