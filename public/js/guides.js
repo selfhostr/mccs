@@ -390,7 +390,10 @@ export const GUIDES = {
         service: 'all',
         title: 'Installer DAVx⁵',
         steps: [
-          { t: 'Installez DAVx⁵ depuis <a href="{L:davx5Fdroid}" rel="noopener">F-Droid</a> (gratuit) ou le <a href="{L:davx5Play}" rel="noopener">Google Play Store</a> (payant, soutient les développeurs). L’APK est aussi disponible sur <a href="{L:davx5Github}" rel="noopener">GitHub</a>.' },
+          { t: 'Sur votre téléphone, ouvrez la <a href="{L:davx5Github}" rel="noopener">page de téléchargement de DAVx⁵ sur GitHub</a>.', sub: 'C’est gratuit. DAVx⁵ existe aussi sur le Google Play Store (payant, soutient les développeurs).' },
+          { t: 'Prenez la version stable : celle marquée [[Latest]] avec une étiquette <strong>verte</strong>. N’installez pas celles marquées [[Pre-release]] (étiquette orange), qui sont des versions de test.' },
+          { t: 'Sous cette version, ouvrez [[Assets]] et touchez le fichier qui se termine par <strong>.apk</strong> pour le télécharger.' },
+          { t: 'Ouvrez le fichier téléchargé et touchez [[Installer]]. Si Android le demande, autorisez l’installation depuis votre navigateur ([[Paramètres]] › [[Autoriser cette source]]), puis revenez en arrière et touchez [[Installer]].' },
         ],
       },
       {
