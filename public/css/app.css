@@ -551,3 +551,21 @@ main { min-height: calc(100vh - 60px - 54px); min-height: calc(100dvh - 60px - 5
 /* .tips garde sa puce native (list-item) ; .opts reste en bloc pour conserver les espaces entre texte, gras et lien. */
 .tips summary { display: list-item; min-height: 40px; padding: 9px 0; }
 .opts summary { display: block; min-height: 40px; padding: 9px 0; }
+
+/* ===== Logos de marque (couleurs officielles ; Apple suit la couleur du texte). Thème sombre par défaut. ===== */
+.brand { color: var(--text); }
+.brand.b-win, .brand.b-outlook, .brand.b-tb { color: #3d9bff; }
+.brand.b-android { color: #3DDC84; }
+.brand.b-gmail { color: #EA4335; }
+.brand.b-samsung { color: #7d95ff; }
+@media (prefers-color-scheme: light) {
+  .brand.b-win, .brand.b-outlook { color: #0078D4; }
+  .brand.b-tb { color: #0A84FF; }
+  .brand.b-samsung { color: #1428A0; }
+}
+.device-icon svg.brand { width: 32px; height: 32px; }
+.app-icon svg.brand { width: 28px; height: 28px; }
+.app-row-icon svg.brand { width: 24px; height: 24px; }
+svg.brand.b-wide { width: 42px; height: auto; }
+.app-icon svg.brand.b-wide { width: 40px; }
+.app-row-icon svg.brand.b-wide { width: 32px; }

@@ -10,9 +10,9 @@
 
 export const DEVICES = [
   { id: 'windows', name: 'Windows', desc: 'PC avec Outlook ou Thunderbird', icon: 'windows' },
-  { id: 'macos', name: 'macOS', desc: 'Mac avec Mail, Calendrier, Contacts', icon: 'mac' },
-  { id: 'ios', name: 'iPhone / iPad', desc: 'iOS et iPadOS', icon: 'iphone' },
-  { id: 'android', name: 'Android', desc: 'Samsung, Google Pixel, etc.', icon: 'android' },
+  { id: 'macos', name: 'macOS', desc: 'Mac avec Mail, Calendrier, Contacts', icon: 'macos' },
+  { id: 'ios', name: 'iPhone / iPad', desc: 'iOS et iPadOS', icon: 'ios' },
+  { id: 'android', name: 'Android', desc: 'Samsung, Google Pixel, etc.', icon: 'androidlogo' },
 ];
 
 export const APPS = {
@@ -26,7 +26,7 @@ const THUNDERBIRD = {
   id: 'thunderbird',
   name: 'Thunderbird',
   desc: 'Gratuit, gère mail, agenda et contacts sans module à ajouter.',
-  icon: 'bird',
+  icon: 'thunderbird',
   covers: ['mail', 'calendar', 'contacts'],
   intro: 'Thunderbird (version 128 ou plus récente, Windows et macOS) gère nativement la messagerie, les agendas CalDAV et les carnets d’adresses CardDAV.',
   sections: [
@@ -192,7 +192,7 @@ export const GUIDES = {
     id: 'mac-profile',
     name: 'Profil en un clic',
     desc: 'Mail, Calendrier et Contacts configurés automatiquement.',
-    icon: 'profile',
+    icon: 'appleprofile',
     covers: ['mail', 'calendar', 'contacts'],
     recommended: true,
     profile: true,
@@ -218,7 +218,7 @@ export const GUIDES = {
     id: 'mac-manual',
     name: 'Apple Mail, Calendrier et Contacts',
     desc: 'Configuration manuelle dans les apps Apple.',
-    icon: 'mac',
+    icon: 'apple',
     covers: ['mail', 'calendar', 'contacts'],
     intro: 'Méthode manuelle, utile si vous ne pouvez pas installer de profil. Les libellés correspondent à macOS Sonoma, Sequoia et Tahoe.',
     sections: [
@@ -259,7 +259,7 @@ export const GUIDES = {
     id: 'ios-profile',
     name: 'Profil en un clic',
     desc: 'Mail, Calendrier et Contacts installés en moins d’une minute.',
-    icon: 'profile',
+    icon: 'appleprofile',
     covers: ['mail', 'calendar', 'contacts'],
     recommended: true,
     profile: true,
@@ -290,7 +290,7 @@ export const GUIDES = {
     id: 'ios-manual',
     name: 'Configuration manuelle',
     desc: 'Dans Réglages, compte par compte.',
-    icon: 'gear',
+    icon: 'apple',
     covers: ['mail', 'calendar', 'contacts'],
     intro: 'Méthode manuelle, pour iOS et iPadOS 18 ou plus récent. Sur iOS 17 et antérieur, les réglages se trouvent directement dans [[Réglages]] › [[Mail]] (sans passer par [[Apps]]).',
     sections: [
@@ -335,7 +335,7 @@ export const GUIDES = {
     id: 'gmail',
     name: 'Gmail',
     desc: 'L’app de messagerie installée sur la plupart des Android.',
-    icon: 'mail',
+    icon: 'gmail',
     covers: ['mail'],
     intro: 'L’app Gmail sait relever n’importe quelle boîte IMAP. Pour le calendrier et les contacts, ajoutez ensuite DAVx⁵.',
     sections: [
@@ -359,7 +359,7 @@ export const GUIDES = {
     id: 'samsung',
     name: 'Samsung Email',
     desc: 'L’app de messagerie des smartphones Samsung Galaxy.',
-    icon: 'mail',
+    icon: 'samsung',
     covers: ['mail'],
     intro: 'Pour les smartphones Samsung Galaxy (One UI). Pour le calendrier et les contacts, ajoutez ensuite DAVx⁵.',
     sections: [
