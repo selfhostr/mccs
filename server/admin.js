@@ -9,6 +9,7 @@ const util = require('util');
 const { validateValues, isHost } = require('./settings');
 const { probe } = require('./probe');
 const { discover: realDiscover } = require('./discover');
+const { HttpError, readBody, readJson: readJsonLimited, clientIp: ipOf, originOk: originOf, createWindowCounter } = require('./http-util');
 
 const scrypt = util.promisify(crypto.scrypt);
 
@@ -72,44 +73,14 @@ function writeAtomic(file, data, mode) {
   }
 }
 
-class HttpError extends Error {
-  constructor(status, error) { super(error); this.status = status; this.error = error; }
-}
-
-// Lit le corps en flux et coupe dès que la limite est dépassée (rien n'est gardé au-delà).
-function readBody(req, limit) {
-  return new Promise((resolve, reject) => {
-    const declared = Number(req.headers['content-length']);
-    if (declared > limit) { reject(new HttpError(413, 'size')); return; }
-    const chunks = [];
-    let size = 0;
-    let done = false;
-    req.on('data', (chunk) => {
-      if (done) return;
-      size += chunk.length;
-      if (size > limit) { done = true; chunks.length = 0; reject(new HttpError(413, 'size')); return; }
-      chunks.push(chunk);
-    });
-    req.on('end', () => { if (!done) { done = true; resolve(Buffer.concat(chunks)); } });
-    req.on('error', (err) => { if (!done) { done = true; reject(err); } });
-  });
-}
-
-async function readJson(req) {
-  const body = await readBody(req, JSON_LIMIT);
-  if (body.length === 0) return {};
-  let data;
-  try { data = JSON.parse(body.toString('utf8')); } catch { throw new HttpError(400, 'json'); }
-  if (!data || typeof data !== 'object' || Array.isArray(data)) throw new HttpError(400, 'json');
-  return data;
-}
+const readJson = (req) => readJsonLimited(req, JSON_LIMIT);
 
 // discover : découverte CalDAV/CardDAV (remplaçable dans les tests).
 function createAdmin({ config, settings, dataDir, send = defaultSend, serveStatic = () => false, notFound, discover = realDiscover }) {
   const adminFile = path.join(dataDir, 'admin.json');
   const uploadsDir = path.join(dataDir, 'uploads');
   const sessions = new Map(); // empreinte du jeton -> expiration (ordre = du moins au plus récemment utilisé)
-  const failures = new Map(); // ip -> { n, until }
+  const failures = createWindowCounter({ windowMs: LOCK_MS }); // essais de connexion par IP
   const nf = notFound || ((req, res, extra) => send(req, res, 404, 'Page introuvable.\n', Object.assign({ 'Content-Type': 'text/plain; charset=utf-8' }, extra)));
 
   /* ---------- admin.json ---------- */
@@ -164,38 +135,12 @@ function createAdmin({ config, settings, dataDir, send = defaultSend, serveStati
 
   /* ---------- Verrouillage ---------- */
 
-  // IP du client : en-tête du proxy seulement s'il est déclaré de confiance (TRUSTED_PROXY_HEADER),
-  // sinon l'adresse de la connexion. Pour X-Forwarded-For, seule la dernière adresse (ajoutée par le proxy) compte.
-  function clientIp(req) {
-    const h = config.trustedProxyHeader;
-    const raw = h ? req.headers[h] : undefined;
-    if (typeof raw === 'string' && raw.trim()) {
-      const v = h === 'x-forwarded-for' ? raw.split(',').pop() : raw;
-      if (v.trim()) return v.trim();
-    }
-    return String(req.socket.remoteAddress || '');
-  }
+  const clientIp = (req) => ipOf(req, config.trustedProxyHeader);
   // Secondes restantes de verrouillage (0 = libre).
-  function lockedFor(ip) {
-    const f = failures.get(ip);
-    const now = Date.now();
-    return f && f.until > now && f.n >= MAX_FAILURES ? Math.ceil((f.until - now) / 1000) : 0;
-  }
+  const lockedFor = (ip) => (failures.count(ip) >= MAX_FAILURES ? failures.retryAfter(ip) : 0);
   // Compté avant la vérification (essais simultanés compris), effacé en cas de succès.
   // Renvoie le nombre d'essais de la fenêtre : au-delà de MAX_FAILURES, le mot de passe n'est pas vérifié.
-  function recordAttempt(ip) {
-    const now = Date.now();
-    const f = failures.get(ip);
-    const cur = f && f.until > now ? f : { n: 0, until: now + LOCK_MS };
-    cur.n++;
-    failures.set(ip, cur);
-    if (failures.size > 5000) {
-      for (const [k, v] of failures) if (v.until <= now) failures.delete(k);
-      // Encore trop : on retire les plus anciennes entrées (ordre d'insertion), jamais toutes.
-      for (const k of failures.keys()) { if (failures.size <= 5000) break; if (k !== ip) failures.delete(k); }
-    }
-    return cur.n;
-  }
+  const recordAttempt = (ip) => failures.hit(ip);
   const lockedResponse = (req, res, ip, extra = {}, body = {}) => {
     const wait = Math.max(1, lockedFor(ip));
     return json(req, res, 429, Object.assign(body, { error: 'locked', retryAfter: wait }), Object.assign({ 'Retry-After': String(wait) }, extra));
@@ -247,14 +192,7 @@ function createAdmin({ config, settings, dataDir, send = defaultSend, serveStati
     return `${COOKIE}=${value}; HttpOnly; SameSite=Strict; Path=/support; Max-Age=${maxAge}` + (isHttps(req) ? '; Secure' : '');
   }
 
-  // L'en-tête Origin doit désigner ce serveur : http(s):// + Host, ou l'origine de PUBLIC_URL.
-  function originOk(req) {
-    const origin = String(req.headers.origin || '').toLowerCase();
-    const host = String(req.headers.host || '').toLowerCase();
-    if (!origin || origin === 'null') return false;
-    if (host && (origin === 'https://' + host || origin === 'http://' + host)) return true;
-    try { return origin === new URL(config.publicUrl).origin.toLowerCase(); } catch { return false; }
-  }
+  const originOk = (req) => originOf(req, config.publicUrl);
 
   /* ---------- Réponses ---------- */
 
