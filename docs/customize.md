@@ -31,7 +31,7 @@ Copyable values (`f:` and `{F:}`) are defined by `fieldDefs()` in `public/js/app
 
 1. Add `shot: 'folder/file.png'` (and optionally `shotCaption`) to a step.
 2. Put the image in `public/img/guides/` (PNG recommended, 1200 to 1600 px wide, no real personal data).
-3. Rebuild: `docker compose up -d --build`.
+3. Rebuild the image from a checkout: `docker compose -f docker-compose.yml -f docker-compose.build.yml up -d --build`. The published image does not contain your changes.
 
 The "Voir une capture" link appears only when the file exists; the list is built at startup. `public/img/guides/README.md` lists the expected files.
 

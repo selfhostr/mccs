@@ -4,6 +4,20 @@ All notable changes to mccs. The format follows [Keep a Changelog](https://keepa
 
 ## Unreleased
 
+### Added
+
+- Prebuilt image `ghcr.io/selfhostr/mccs` (amd64, arm64), published by the release workflow: `vX.Y.Z` tags give `:X.Y.Z`, `:X.Y`, `:X` and `:latest`, `main` gives `:edge`.
+- `docker-compose.build.yml` to build from a checkout.
+- First start without `SUPPORT_PASSWORD` generates an admin password, printed in the logs (user `support`, address of `/support`) until the admin changes it; a banner invites the admin to change it.
+
+### Changed
+
+- Install is now `curl -O` of `docker-compose.yml`, `docker compose up -d` and `docker compose logs mccs`. The compose file no longer reads variables and `.env.example` is gone; everything is set from `/support`. Environment variables are still read, as an advanced option under `environment:`.
+- `HOST_PORT`, `IMAGE_NAME` and `CONTAINER_NAME` are removed; change the port in the `ports` line.
+- `PUBLIC_URL` is empty by default and follows the address used by the browser (it was `https://config.example.com`).
+- `/support` is always active; it answers 404 only when `/data` is not writable and `SUPPORT_PASSWORD` is not set.
+- Upgrade with `docker compose pull && docker compose up -d`.
+
 ## [1.0.0] - 2026-11-23
 
 ### Added

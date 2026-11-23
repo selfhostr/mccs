@@ -15,7 +15,7 @@ Also sent: `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Fr
 
 ## The /support admin area
 
-- Disabled (404) while `SUPPORT_PASSWORD` is empty and no password has been saved in `/data/admin.json`.
+- Always on, behind the password. Disabled (404) only when `/data` is not writable and `SUPPORT_PASSWORD` is empty. On first start a random password is generated; its hash goes to `/data/admin.json` and the clear text to `/data/initial-password` (mode 600), reminded in the logs until the admin changes it, then deleted.
 - Sign-in form, then a session cookie `mccs_admin`: random 256-bit token, `HttpOnly`, `SameSite=Strict`, `Path=/support` (never sent to the customer site), `Max-Age` 8 hours, sliding. `Secure` when the request arrives over HTTPS (`X-Forwarded-Proto: https`) or `PUBLIC_URL` is `https:`. Sessions live in memory (1000 at most): a restart signs everyone out.
 - Credentials are compared in constant time. A password changed in the admin is stored as a scrypt hash (16-byte salt) in `/data/admin.json` (mode 600), never in clear and never logged. Changing it closes the other sessions.
 - 10 failed attempts from one address within 15 minutes lock sign-in (and password change) for that address until the window ends (HTTP 429).
@@ -26,7 +26,7 @@ Also sent: `Strict-Transport-Security`, `X-Content-Type-Options: nosniff`, `X-Fr
 - Responses carry `X-Robots-Tag: noindex, nofollow` and `Cache-Control: no-store`.
 - The client address is the connection's address, or the header named by `TRUSTED_PROXY_HEADER` (`CF-Connecting-IP`, or the last `X-Forwarded-For` entry) when you set it. Set it only behind a proxy that controls that header.
 - Concurrent login attempts are counted before the password is checked: at most 10 passwords per address and per 15-minute window, even when sent in parallel.
-- An unreadable or unknown-version `admin.json` blocks admin login (HTTP 503) instead of silently falling back to `SUPPORT_PASSWORD`. Fix or delete the file; deleting it re-enables `SUPPORT_PASSWORD`.
+- An unreadable or unknown-version `admin.json` blocks admin login (HTTP 503) instead of silently falling back to `SUPPORT_PASSWORD`. Fix or delete the file; deleting it generates a new password at the next start (or re-enables `SUPPORT_PASSWORD` if set).
 - The server test on the admin page can reach any host and port the container can reach, including internal ones. Only trusted administrators should have the admin password.
 
 ## Optional password check

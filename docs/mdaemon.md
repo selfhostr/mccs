@@ -1,6 +1,6 @@
 # MDaemon
 
-The admin's automatic detection (see [Configuration](configuration.md#automatic-detection)) recognises MDaemon by its `Server` or `WWW-Authenticate` header, or by its `/webdav/` paths, and sets `DAV_PRESET=mdaemon`. That value is also the default when nothing is set, so an existing `.env` without `DAV_PRESET` keeps exactly the same URLs. The preset builds the WebDAV paths used by MDaemon from `DAV_BASE_URL` (`https://MAIL_HOST` by default); the detection only changes `DAV_BASE_URL` when MDaemon answers on another host.
+The admin's automatic detection (see [Configuration](configuration.md#automatic-detection)) recognises MDaemon by its `Server` or `WWW-Authenticate` header, or by its `/webdav/` paths, and sets `DAV_PRESET=mdaemon`. That value is also the default when nothing is set, so an existing configuration without `DAV_PRESET` keeps exactly the same URLs. The preset builds the WebDAV paths used by MDaemon from `DAV_BASE_URL` (`https://MAIL_HOST` by default); the detection only changes `DAV_BASE_URL` when MDaemon answers on another host.
 
 ## URLs
 

@@ -2,15 +2,15 @@
 
 ## The wizard shows `mail.example.com`
 
-`MAIL_HOST` is not set, or `.env` is not next to `docker-compose.yml`. Fix it and run `docker compose up -d`. Check `/api/config` to see what the browser receives.
+`MAIL_HOST` is not set yet. Set the mail servers in `/support` (Settings, or rerun the assistant). Check `/api/config` to see what the browser receives.
 
 ## `/support` answers 404
 
-`SUPPORT_PASSWORD` is empty and no password was saved in the admin. Set it and restart.
+`/data` is not writable (is the `mccs-data` volume mounted?) and `SUPPORT_PASSWORD` is not set, so there is nowhere to keep a password. Mount a writable volume on `/data`, or set `SUPPORT_PASSWORD`, then restart.
 
 ## I forgot the admin password
 
-Delete `/data/admin.json` (`docker compose exec mccs rm /data/admin.json`): `SUPPORT_PASSWORD` works again at once.
+Run `docker compose exec mccs rm /data/admin.json && docker compose restart mccs && docker compose logs mccs`: a new password is generated and printed (if `SUPPORT_PASSWORD` is set, it works again instead).
 
 ## Sign-in succeeds but the sign-in page comes back
 

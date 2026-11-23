@@ -1,9 +1,11 @@
 # Configuration
 
+The normal way to configure mccs is the admin area, `/support` (setup assistant and Settings tab): no file to edit. The environment variables below are an advanced option, for example to preset values; with Docker, add them under `environment:` in `docker-compose.yml`.
+
 Settings come from three layers, the first one set wins:
 
 1. **Saved settings** in `/data/config.json`, written by the admin page (no restart needed). Editing the file by hand takes effect at the next restart; to reset everything, delete it and restart.
-2. **Environment variables**, read at startup. With Docker, put them in `.env` (see `.env.example`) and run `docker compose up -d`; no rebuild needed.
+2. **Environment variables**, read at startup. With Docker, add them under `environment:` in the compose file and run `docker compose up -d`; no rebuild needed.
 3. **Built-in defaults.**
 
 `config.json` only holds the values changed in the admin, keyed by variable name. Values derived from another one (hosts from `MAIL_HOST`, DAV URLs from `DAV_BASE_URL`, `DAV_PRESET` and the discovery URLs) keep following it until they are changed themselves. The previous version is kept in `config.prev.json`. `PORT`, `SUPPORT_USER`, `SUPPORT_PASSWORD`, `DATA_DIR` and `TRUSTED_PROXY_HEADER` can only be set in the environment.
@@ -14,9 +16,6 @@ The compose file mounts the `mccs-data` volume on `/data`. Without a writable `/
 
 | Variable | Default | Description |
 |---|---|---|
-| `HOST_PORT` | `8080` | Published host port (compose only) |
-| `IMAGE_NAME` | `mccs` | Docker image name (compose only) |
-| `CONTAINER_NAME` | `mccs` | Container name (compose only) |
 | `PORT` | `8080` | Listening port of the Node process |
 | `DATA_DIR` | `/data` | Folder for saved settings (`config.json`), the admin password (`admin.json`) and uploads |
 | `TRUSTED_PROXY_HEADER` | empty | Header giving the client IP behind a trusted proxy: `CF-Connecting-IP` or `X-Forwarded-For`; empty = connection address. Environment only |
@@ -29,26 +28,26 @@ The compose file mounts the `mccs-data` volume on `/data`. Without a writable `/
 | `SMTP_HOST` / `SMTP_PORT` / `SMTP_SECURITY` | `MAIL_HOST` / `465` / `SSL/TLS` | Outgoing server |
 | `WEBMAIL_URL` | `https://MAIL_HOST/` | Webmail link |
 | `ALLOWED_DOMAINS` | empty | Email domains accepted by the connection test, comma-separated (`example.com, example.org`); empty = all |
-| `CONNECTION_TEST` | `false` | Let customers check their password before setup (`POST /api/test`). Also accepts `1`, `on`, `yes` in `.env`; the admin saves `true` or `false` |
+| `CONNECTION_TEST` | `false` | Let customers check their password before setup (`POST /api/test`). Also accepts `1`, `on`, `yes` in the environment; the admin saves `true` or `false` |
 | `CONNECTION_TEST_MAX_PER_EMAIL` | `5` | Checks allowed per email address in 15 minutes (1 to 10000) |
 | `CONNECTION_TEST_MAX_PER_IP` | `20` | Checks allowed per client IP in 15 minutes, all addresses together (1 to 10000) |
 | `TEST_MSG_IMAP_<STATUS>`, `TEST_MSG_SMTP_<STATUS>`, `TEST_MSG_RATE_LIMITED`, `TEST_MSG_DOMAIN` | French texts | Message shown to the customer for each result of the check, see below |
-| `DAV_PRESET` | `mdaemon` | Server type, `mdaemon` or `generic`. Set by the admin's automatic detection; still accepted in `.env` |
+| `DAV_PRESET` | `mdaemon` | Server type, `mdaemon` or `generic`. Set by the admin's automatic detection; still accepted in the environment |
 | `DAV_BASE_URL` | `https://MAIL_HOST` | Base of all DAV URLs |
 | `CALDAV_URL`, `CARDDAV_URL`, `TASKS_URL` | per server type | Generic server URLs shown before an address is typed |
 | `DAV_DISCOVERY_URL`, `DAV_CARD_DISCOVERY_URL` | `DAV_BASE_URL/.well-known/caldav` and `/carddav` | Calendar and contacts discovery URLs, filled by the automatic detection. With `generic`, every calendar and contacts URL follows them |
 | `DAV_PRINCIPAL_URL_TEMPLATE`, `DAV_CALENDAR_URL_TEMPLATE`, `DAV_TASKS_URL_TEMPLATE`, `DAV_CONTACTS_URL_TEMPLATE` | per server type | Personal URL templates (`{email}`, `{local}`, `{domain}`) |
-| `PUBLIC_URL` | `https://config.example.com` | Public address of this app (links, QR codes) |
+| `PUBLIC_URL` | empty | Public address of this app (links, QR codes); empty = the address used by the browser |
 | `SUPPORT_PHONE`, `SUPPORT_EMAIL`, `SUPPORT_HOURS`, `SUPPORT_ADDRESS` | empty | Support contact; each hidden when empty |
 | `SUPPORT_USER` | `support` | Admin user for `/support` |
-| `SUPPORT_PASSWORD` | empty | Initial admin password; once changed in the admin, `/data/admin.json` wins. Empty and no `admin.json` = `/support` returns 404 |
+| `SUPPORT_PASSWORD` | empty | Optional admin password. Empty = one is generated on first start and printed in the logs; once changed in the admin, `/data/admin.json` wins |
 | `PROFILE_ORGANIZATION` | `BRAND_NAME` | Organisation in the Apple profile |
 | `PROFILE_ID_PREFIX` | `com.example.mailsetup` | Profile identifier prefix: set your own reverse-domain prefix |
 | `CALDAVSYNC_URL`, `DAVX5_GITHUB_URL`, `DAVX5_FDROID_URL`, `DAVX5_PLAY_URL`, `THUNDERBIRD_URL` | official download pages | Download links used in guides |
 
 ## Docker
 
-`HOST_PORT` (8080), `IMAGE_NAME` and `CONTAINER_NAME` (both `mccs`). Inside the container the app listens on `PORT` (8080).
+The compose file holds only the image, the port, the volume and the hardening. Change the published port by editing the `ports` line (`"8443:8080"`). Inside the container the app listens on `PORT` (8080).
 
 ## Branding
 
@@ -97,7 +96,7 @@ When nothing is found, type the two addresses under "Avancé". The server type t
 
 ### Manual setting
 
-`DAV_PRESET` stays accepted in `.env` and still defaults to `mdaemon`, so an existing installation gives exactly the same URLs as before. With `generic` and no discovery URL set, every DAV URL is `DAV_BASE_URL/.well-known/caldav` or `/carddav`, as before. Any URL can be overridden individually:
+`DAV_PRESET` stays accepted in the environment and still defaults to `mdaemon`, so an existing installation gives exactly the same URLs as before. With `generic` and no discovery URL set, every DAV URL is `DAV_BASE_URL/.well-known/caldav` or `/carddav`, as before. Any URL can be overridden individually:
 
 - `CALDAV_URL`, `CARDDAV_URL`, `TASKS_URL`: generic URLs shown before an address is typed.
 - `DAV_DISCOVERY_URL`, `DAV_CARD_DISCOVERY_URL`: discovery URLs; with `generic`, they are also the default for every other URL below.
@@ -105,8 +104,8 @@ When nothing is found, type the two addresses under "Avancé". The server type t
 
 ## App, support and profile
 
-- `PUBLIC_URL`: public address used in links and QR codes.
-- `SUPPORT_USER` (`support`) and `SUPPORT_PASSWORD`: sign-in for `/support`. The password can then be changed in the admin; it is stored hashed in `/data/admin.json`, and deleting that file brings `SUPPORT_PASSWORD` back. No password at all disables the page (404). Generate one with `openssl rand -base64 24`.
+- `PUBLIC_URL`: public address used in links and QR codes. Empty = the address used by the browser; set it when mccs sits behind a proxy under another name.
+- `SUPPORT_USER` (`support`) and `SUPPORT_PASSWORD`: sign-in for `/support`. The password can then be changed in the admin; it is stored hashed in `/data/admin.json`, and deleting that file generates a new password at the next start (or brings `SUPPORT_PASSWORD` back if set). Without `SUPPORT_PASSWORD`, a password is generated on first start and printed in the logs. Only a non-writable `/data` without `SUPPORT_PASSWORD` disables the page (404).
 - `PROFILE_ORGANIZATION` (defaults to `BRAND_NAME`) and `PROFILE_ID_PREFIX` (`com.example.mailsetup`).
 - Download links: `CALDAVSYNC_URL`, `DAVX5_GITHUB_URL`, `DAVX5_FDROID_URL`, `DAVX5_PLAY_URL`, `THUNDERBIRD_URL`.
 
@@ -123,7 +122,7 @@ SUPPORT_EMAIL=support@example.com
 
 ## Example: other servers (Nextcloud, SOGo, Radicale, Baïkal, Stalwart...)
 
-Easiest: let the admin detect the addresses. In `.env` only, the equivalent is:
+Easiest: let the admin detect the addresses. As environment variables only, the equivalent is:
 
 ```env
 MAIL_HOST=mail.example.com

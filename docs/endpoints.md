@@ -53,6 +53,6 @@ Static files are served from memory, with gzip for text. Assets requested with t
 
 ## Ports and paths
 
-- Port `8080` (`PORT`) inside the container, published as `HOST_PORT`.
-- The only things written to disk are in the `mccs-data` volume: `/data/config.json` (settings saved from the admin page), `/data/admin.json` (hashed admin password and "setup done" flag) and `/data/uploads/` (uploaded images, created on first upload).
+- Port `8080` (`PORT`) inside the container, published as set by the `ports` line of `docker-compose.yml` (`8080:8080` by default).
+- The only things written to disk are in the `mccs-data` volume: `/data/config.json` (settings saved from the admin page), `/data/admin.json` (hashed admin password and "setup done" flag), `/data/initial-password` (generated password, until changed) and `/data/uploads/` (uploaded images, created on first upload).
 - Application code is in `/app` (`server/` and `public/`) in the image.

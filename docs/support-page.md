@@ -4,8 +4,10 @@
 
 ## Sign in
 
-1. Set `SUPPORT_PASSWORD` (and optionally `SUPPORT_USER`, default `support`) and restart with `docker compose up -d`.
-2. Open `/support`. You land on `/support/login.html`; sign in with `SUPPORT_USER` and `SUPPORT_PASSWORD`.
+1. On the first start, mccs generates a password. Read it with `docker compose logs mccs`, together with the user (`support`) and the address `http://<your-server>:8080/support`.
+2. Open `/support`. You land on `/support/login.html`; sign in.
+
+The password is stored as a hash in `/data/admin.json` and kept in clear in `/data/initial-password` (mode 600). It is printed again at each start until you change it; a banner in the admin also invites you to. With `SUPPORT_PASSWORD` set (advanced option), nothing is generated and that value is the password.
 
 The session lasts 8 hours after your last action. "Se déconnecter" in the account menu ends it.
 
@@ -21,17 +23,23 @@ At the calendar and contacts step, mccs looks for the CalDAV and CardDAV address
 
 ## Tabs
 
-- **Réglages**: every setting, grouped as in [Configuration](configuration.md). Each field shows where its value comes from (default, `.env` or saved here) and can go back to its default. "Annuler la dernière modification" restores the previous `config.json`.
+- **Réglages**: every setting, grouped as in [Configuration](configuration.md). Each field shows where its value comes from (default, environment or saved here) and can go back to its default. "Annuler la dernière modification" restores the previous `config.json`.
 - **Liens clients**: type the customer's address (name, device and application are optional), then copy the link or download the QR code as PNG or SVG, and pass it on through the channel of your choice. mccs sends nothing itself. The link points to `PUBLIC_URL`, so set it first.
 
 Logo and background images can be uploaded: PNG, JPEG or WebP, 2 MB at most. They are stored in `/data/uploads/` and served from `/uploads/`. SVG is not accepted as an upload; an SVG logo can still be used by URL.
 
 ## Password
 
-"Changer le mot de passe" in the account menu replaces `SUPPORT_PASSWORD` with a password of at least 12 characters. It is stored as a scrypt hash in `/data/admin.json`, never in clear. From then on `SUPPORT_PASSWORD` no longer works, and other open sessions are closed.
+"Changer le mot de passe" in the account menu replaces the generated password (or `SUPPORT_PASSWORD`) with one of at least 12 characters. It is stored as a scrypt hash in `/data/admin.json`. The clear copy in `/data/initial-password` is deleted and the reminder in the logs disappears. From then on `SUPPORT_PASSWORD` no longer works, and other open sessions are closed.
 
-**Forgotten password:** delete `/data/admin.json` (for example `docker compose exec mccs rm /data/admin.json`). `SUPPORT_PASSWORD` works again at once. The setup assistant opens again at the next sign-in, since the "setup done" flag lives in the same file.
+**Forgotten password:**
+
+```bash
+docker compose exec mccs rm /data/admin.json && docker compose restart mccs && docker compose logs mccs
+```
+
+A new password is generated and printed (unless `SUPPORT_PASSWORD` is set, which then works again). The setup assistant opens again at the next sign-in, since the "setup done" flag lives in the same file.
 
 ## Turning it off
 
-Empty `SUPPORT_PASSWORD` and delete `/data/admin.json`: `/support` then answers 404. See [Security](security.md) for the lock-out rules.
+`/support` is always on, protected by the password and the lock-out rules (see [Security](security.md)). It only answers 404 when `/data` is not writable and `SUPPORT_PASSWORD` is not set, since there is nowhere to keep a password.

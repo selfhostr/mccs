@@ -15,12 +15,12 @@
 ## Quick start
 
 ```bash
-git clone https://github.com/selfhostr/mccs.git && cd mccs
-cp .env.example .env      # set MAIL_HOST, PUBLIC_URL, BRAND_NAME
-docker compose up -d --build
+curl -O https://raw.githubusercontent.com/selfhostr/mccs/main/docker-compose.yml
+docker compose up -d
+docker compose logs mccs
 ```
 
-Open http://localhost:8080 and try the wizard with an address on your domain. Settings changed later from the admin page are saved in the `mccs-data` volume: back up your `.env` and that volume. For production, put it behind an HTTPS reverse proxy: see [docs/reverse-proxy.md](docs/reverse-proxy.md) and [docs/install.md](docs/install.md).
+The logs print the sign-in for the admin area (user `support`, a generated password) and its address. Open `http://<your-server>:8080/support`: the setup assistant sets your mail servers, calendar, contacts, brand and support contact, all from the browser. Settings are saved in the `mccs-data` volume: back it up. For production, put it behind an HTTPS reverse proxy: see [docs/reverse-proxy.md](docs/reverse-proxy.md) and [docs/install.md](docs/install.md).
 
 ## Features
 
