@@ -244,7 +244,7 @@ function setStep(n, deviceId = '') {
   });
 }
 
-function showWizard(html, step, deviceId = '') {
+function showWizard(html, step, deviceId = '', quiet = false) {
   $('#view-home').hidden = true;
   $('#view-wizard').hidden = false;
   $('#who-email').textContent = state.email;
@@ -253,8 +253,9 @@ function showWizard(html, step, deviceId = '') {
   view.innerHTML = html;
   view.classList.remove('fade-in');
   void view.offsetWidth;
-  view.classList.add('fade-in');
+  if (!quiet) view.classList.add('fade-in');
   window.scrollTo({ top: 0, behavior: 'auto' });
+  document.querySelector('#view-wizard > .container').classList.remove('wide');
   const h = view.querySelector('[data-focus]') || view.querySelector('h1');
   if (h) { h.setAttribute('tabindex', '-1'); h.focus({ preventScroll: true }); }
 }
@@ -354,24 +355,25 @@ function guideSteps(g) {
   return out;
 }
 
+const shotUrl = (st) => ((state.cfg.shots || []).includes(st.shot) ? '/img/guides/' + st.shot : '');
+
+// Capture d'écran de l'étape : colonne image (ordinateur) ou sous le texte (mobile). Clic = ouvrir en grand.
 function renderShot(st, g, n) {
-  const shots = new Set(state.cfg.shots || []);
-  if (!st.shot || !shots.has(st.shot)) return '';
-  const id = 'shot-' + n;
+  const url = st.shot ? shotUrl(st) : '';
+  if (!url) return '';
   const cap = st.shotCaption || `Capture d’écran : ${g.name}, étape ${n}`;
-  return `<div class="shot">
-    <button type="button" class="shot-toggle" aria-expanded="false" aria-controls="${id}" data-shot="/img/guides/${esc(st.shot)}">${ICONS.image}<span>Voir une capture</span></button>
-    <figure class="shot-fig" id="${id}" hidden>
-      <a class="shot-link" href="/img/guides/${esc(st.shot)}" target="_blank" rel="noopener" title="Ouvrir en grand"><img alt="${esc(cap)}" loading="lazy" decoding="async"></a>
-      <figcaption><span>${esc(cap)}</span><button type="button" class="shot-close" aria-controls="${id}">${ICONS.close}Fermer</button></figcaption>
-    </figure>
-  </div>`;
+  return `<figure class="gshot">
+    <a class="gshot-link" href="${esc(url)}" target="_blank" rel="noopener" title="Ouvrir en grand"><img src="${esc(url)}" alt="${esc(cap)}" decoding="async"></a>
+    <figcaption>${esc(cap)}</figcaption>
+  </figure>`;
 }
 
 const guideLinks = (params = true) => `<p class="guide-links">
     ${params ? `<button type="button" class="link-btn" data-panel="panel-params" aria-haspopup="dialog">${ICONS.gear}Afficher les paramètres manuels</button>` : ''}
     <button type="button" class="link-btn" data-panel="panel-help" aria-haspopup="dialog">${ICONS.info}Besoin d’aide&nbsp;?</button>
   </p>`;
+
+let guideView = { key: '', n: 0 };
 
 function renderGuide(deviceId, guideId, stepParam) {
   const dev = DEVICES.find((d) => d.id === deviceId);
@@ -381,72 +383,61 @@ function renderGuide(deviceId, guideId, stepParam) {
   const total = steps.length;
   const base = `#/guide/${deviceId}/${guideId}`;
   if (stepParam === 'fin') return renderDone(dev, g, base);
-  const target = stepParam === undefined || stepParam === '' ? 0 : Number(stepParam);
-  if (!Number.isInteger(target) || target < 0 || target > total) return go(base);
+  const target = stepParam === undefined || stepParam === '' ? 1 : Number(stepParam);
+  if (!Number.isInteger(target) || target < 1 || target > total) return go(base);
 
-  const callouts = (g.callouts || []).map((c) => `<div class="callout${c.kind === 'warn' ? ' callout-warn' : ''}">${ICONS[c.kind === 'warn' ? 'warn' : 'info']}<p>${fmt(c.t)}</p></div>`).join('');
-  // Étapes regroupées par section, numérotation continue sur tout le guide.
-  const groups = [];
-  steps.forEach(({ st, section }, i) => {
-    if (!groups.length || groups[groups.length - 1].section !== section) groups.push({ section, items: [] });
-    groups[groups.length - 1].items.push({ st, n: i + 1 });
-  });
-  const stepHtml = ({ st, n }) => `<li class="gstep" id="etape-${n}">
-      <div class="gstep-head">
-        <span class="gstep-num" aria-hidden="true">${n}</span>
-        <h3 class="sr-only">Étape ${n} sur ${total}</h3>
-      </div>
-      <div class="gstep-body">
-        <p class="gtext">${fmt(st.t)}</p>
-        ${st.dl ? `<div class="download-box">
-          <a class="btn btn-primary" href="${esc(profileUrl())}" download>${ICONS.download}Télécharger le profil</a>
-          <p class="download-meta">Pour <strong>${esc(state.email)}</strong> : ${esc(listFr([...state.services].map((s) => SERVICE_META[s].label)))}. Sans mot de passe.</p>
-        </div>` : ''}
-        ${st.f ? fields(st.f) : ''}
-        ${st.sub ? `<p class="sub">${fmt(st.sub)}</p>` : ''}
-        ${renderShot(st, g, n)}
-      </div>
-      <label class="gdone-label"><input type="checkbox" class="gdone" data-step="${n}" aria-label="Étape ${n} faite"><span aria-hidden="true">C’est fait</span></label>
-    </li>`;
-  const sectionsHtml = groups.map(({ section, items }) => {
-    const icon = SERVICE_META[section.service] ? ICONS[SERVICE_META[section.service].icon] : ICONS.gear;
-    return `<section class="card gsection">
-      <h2 class="gsection-title">${icon}${esc(section.title)}</h2>
-      <ol class="gsteps" start="${items[0].n}">${items.map(stepHtml).join('')}</ol>
-    </section>`;
-  }).join('');
+  const n = target;
+  const { st, section } = steps[n - 1];
+  const first = n === 1;
+  const last = n === total;
+  const prevHref = first ? `#/appareil/${deviceId}` : n === 2 ? base : `${base}/${n - 1}`;
+  const nextHref = last ? `${base}/fin` : `${base}/${n + 1}`;
+  const callouts = first ? (g.callouts || []).map((c) => `<div class="callout${c.kind === 'warn' ? ' callout-warn' : ''}">${ICONS[c.kind === 'warn' ? 'warn' : 'info']}<p>${fmt(c.t)}</p></div>`).join('') : '';
+  const icon = SERVICE_META[section.service] ? ICONS[SERVICE_META[section.service].icon] : ICONS.gear;
+  const shot = renderShot(st, g, n);
+  const key = deviceId + '/' + guideId;
+  const dir = guideView.key === key && guideView.n && guideView.n !== n ? (n > guideView.n ? 'next' : 'prev') : '';
+  guideView = { key, n };
 
   showWizard(`
     <header class="guide-head">
       <span class="app-icon">${ICONS[g.icon]}</span>
-      <div><p class="guide-kicker">${esc(dev.name)}</p><h1 data-focus>${esc(g.name)}</h1></div>
+      <div><p class="guide-kicker">${esc(dev.name)}</p><p class="guide-name">${esc(g.name)}</p></div>
     </header>
-    <p class="guide-intro">${fmt(g.intro)}</p>
-    ${callouts}
-    <p class="gcount" aria-live="polite"><span id="gdone-count">0</span> étape(s) faite(s) sur ${total}</p>
-    ${sectionsHtml}
-    <div class="gfinish">
-      <a class="btn btn-primary btn-block" href="${base}/fin">J’ai terminé${ICONS.arrow}</a>
-      <a class="link-plain" href="#/appareil/${deviceId}">${ICONS.back}Changer d’application</a>
+    ${first ? `<p class="guide-intro">${fmt(g.intro)}</p>${callouts}` : ''}
+    <div class="gstepper">
+      <section class="card gcard" aria-labelledby="gtitle">
+        <div class="gprogress">
+          <p class="gprogress-row"><span class="gprogress-sec">${icon}${esc(section.title)}</span><span class="gprogress-n" aria-live="polite">Étape ${n} sur ${total}</span></p>
+          <div class="gbar" role="progressbar" aria-valuemin="1" aria-valuemax="${total}" aria-valuenow="${n}" aria-label="Progression"><i data-pct="${Math.round((n / total) * 100)}"></i></div>
+        </div>
+        <div class="gstage${dir ? ' go-' + dir : ''}">
+          <h1 class="sr-only" id="gtitle" data-focus>Étape ${n} sur ${total} : ${esc(section.title)}</h1>
+          <div class="gbody${shot ? ' has-shot' : ''}">
+            <div class="gmain">
+              <p class="gtext">${fmt(st.t)}</p>
+              ${st.dl ? `<div class="download-box">
+                <a class="btn btn-primary" href="${esc(profileUrl())}" download>${ICONS.download}Télécharger le profil</a>
+                <p class="download-meta">Pour <strong>${esc(state.email)}</strong> : ${esc(listFr([...state.services].map((s) => SERVICE_META[s].label)))}. Sans mot de passe.</p>
+              </div>` : ''}
+              ${st.f ? fields(st.f) : ''}
+              ${st.sub ? `<p class="sub">${fmt(st.sub)}</p>` : ''}
+            </div>
+            ${shot}
+          </div>
+        </div>
+      </section>
+      <nav class="gnav" aria-label="Navigation entre les étapes">
+        <a class="btn btn-ghost" href="${prevHref}" rel="prev">${ICONS.back}Précédent</a>
+        <a class="btn btn-primary" href="${nextHref}" rel="next">${last ? 'Terminer' : 'Suivant'}${last ? ICONS.check : ICONS.arrow}</a>
+      </nav>
     </div>
+    ${first ? `<p class="gfinish"><a class="link-plain" href="#/appareil/${deviceId}">${ICONS.back}Changer d’application</a></p>` : ''}
     ${guideLinks()}
-    ${deviceId === 'ios' || deviceId === 'android' ? phoneQr(deviceId, g.id) : ''}`, 4, deviceId);
-  document.title = `${g.name} · ${state.cfg.brand}`;
-
-  const view = $('#view');
-  view.querySelectorAll('input.gdone').forEach((cb) => cb.addEventListener('change', () => {
-    cb.closest('.gstep').classList.toggle('is-done', cb.checked);
-    const done = view.querySelectorAll('input.gdone:checked').length;
-    $('#gdone-count').textContent = String(done);
-    document.title = `${done}/${total} · ${g.name} · ${state.cfg.brand}`;
-  }));
-  // Ancien lien vers une étape précise (#/guide/…/<n>) : on fait défiler jusqu'à elle.
-  if (target > 0) {
-    const li = document.getElementById('etape-' + target);
-    li.scrollIntoView({ block: 'start' });
-    li.setAttribute('tabindex', '-1');
-    li.focus({ preventScroll: true });
-  }
+    ${first && (deviceId === 'ios' || deviceId === 'android') ? phoneQr(deviceId, g.id) : ''}`, 4, deviceId, !!dir);
+  document.title = `Étape ${n} sur ${total} · ${g.name} · ${state.cfg.brand}`;
+  document.querySelector('#view-wizard > .container').classList.toggle('wide', steps.some((x) => x.st.shot && shotUrl(x.st)));
+  document.querySelectorAll('#view .gbar i').forEach((i) => i.style.setProperty('--pct', i.dataset.pct + '%'));
 }
 
 function renderDone(dev, g, lastStep) {
@@ -586,6 +577,7 @@ function go(hash) {
   if (location.hash === hash) route(); else location.hash = hash;
 }
 function route() {
+  if (!location.hash.includes('/guide/')) guideView = { key: '', n: 0 };
   const dlg = openDialog();
   if (dlg) dlg.close();
   const h = location.hash;
@@ -668,22 +660,6 @@ function bind() {
       }
       return;
     }
-    const st = e.target.closest('.shot-toggle, .shot-close');
-    if (st) {
-      const fig = document.getElementById(st.getAttribute('aria-controls'));
-      const toggle = fig && fig.parentElement.querySelector('.shot-toggle');
-      if (!fig || !toggle) return;
-      const open = fig.hidden;
-      if (open) {
-        const img = fig.querySelector('img');
-        if (!img.getAttribute('src')) img.src = toggle.dataset.shot;
-      }
-      fig.hidden = !open;
-      toggle.setAttribute('aria-expanded', String(open));
-      toggle.querySelector('span').textContent = open ? 'Masquer la capture' : 'Voir une capture';
-      if (!open) toggle.focus();
-      return;
-    }
     const pb = e.target.closest('[data-panel]');
     if (pb) { openPanel(pb.dataset.panel, pb); return; }
     const cb = e.target.closest('[data-close]');
@@ -691,6 +667,14 @@ function bind() {
   });
 
   window.addEventListener('hashchange', route);
+  document.addEventListener('keydown', (e) => {
+    if ((e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') || e.altKey || e.ctrlKey || e.metaKey || e.shiftKey || e.defaultPrevented) return;
+    if (openDialog() || !document.querySelector('.gnav')) return;
+    const t = e.target;
+    if (t && t.closest && t.closest('input, textarea, select, [contenteditable]')) return;
+    const a = document.querySelector(e.key === 'ArrowLeft' ? '.gnav [rel="prev"]' : '.gnav [rel="next"]');
+    if (a) { e.preventDefault(); location.hash = a.getAttribute('href'); }
+  });
   bindPanels();
 }
 

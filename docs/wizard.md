@@ -2,7 +2,7 @@
 
 At the end the customer has their account, calendar and contacts set up on one device.
 
-The wizard has four steps: address, device, application, then a guide that lists every step on one page, with copyable values and a "done" checkbox per step. Each guide gives copyable values and, where it exists, a link to download the app.
+The wizard has four steps: address, device, application, then a guide that shows one step at a time, with a progress bar, Previous and Next buttons, the copyable values of that step and, where a screenshot exists, an image column beside it. Each step has its own URL (`#/guide/<device>/<guide>/<n>`), so the browser back button and the left and right arrow keys move between steps. Each guide gives copyable values and, where it exists, a link to download the app.
 
 - On a computer, a QR code lets the customer continue on a phone.
 - On iPhone and iPad, the guide offers the Apple configuration profile. See [Apple profile and Thunderbird autoconfig](apple-and-autoconfig.md).
