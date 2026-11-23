@@ -17,4 +17,5 @@ All notable changes to mccs. The format follows [Keep a Changelog](https://keepa
 - `/support` uses a sign-in form and a session instead of HTTP Basic.
 - The project is now `mccs` (Mail, Calendar, Contacts Setup) and lives at `github.com/selfhostr/mccs`.
 - README and documentation follow the same layout as the other selfhostr projects.
+- The "Liens clients" tab no longer prepares an email or SMS (buttons, mobile number field and message texts removed): it gives the link to copy and the QR code (PNG or SVG) only.
 - Inter (text) and JetBrains Mono (code, identifiers, numbers), self-hosted under `public/fonts` with their SIL OFL 1.1 licences, replace the system font stacks. No third-party request is made for fonts.

@@ -20,7 +20,7 @@ The server test opens a TLS connection to the host and port you typed (directly,
 ## Tabs
 
 - **Réglages**: every setting, grouped as in [Configuration](configuration.md). Each field shows where its value comes from (default, `.env` or saved here) and can go back to its default. "Annuler la dernière modification" restores the previous `config.json`.
-- **Liens clients**: type the customer's address (name, device, application and mobile number are optional), then copy the link, download the QR code as PNG or SVG, or open the prepared email or SMS. The link points to `PUBLIC_URL`, so set it first. The texts are in French.
+- **Liens clients**: type the customer's address (name, device and application are optional), then copy the link or download the QR code as PNG or SVG, and pass it on through the channel of your choice. mccs sends nothing itself. The link points to `PUBLIC_URL`, so set it first.
 
 Logo and background images can be uploaded: PNG, JPEG or WebP, 2 MB at most. They are stored in `/data/uploads/` and served from `/uploads/`. SVG is not accepted as an upload; an SVG logo can still be used by URL.
 

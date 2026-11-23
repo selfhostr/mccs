@@ -28,7 +28,7 @@ Open http://localhost:8080 and try the wizard with an address on your domain. Se
 - **Many apps.** Outlook (new and classic), CalDAV Synchronizer, Thunderbird, Apple Mail, Gmail, Samsung apps and DAVx5.
 - **Apple and Thunderbird.** One-tap `.mobileconfig` profile (no password) and Thunderbird autoconfig.
 - **Phone handoff.** QR code on a computer to continue on a phone.
-- **Admin area.** Internal `/support` (sign-in with a session limited to `/support`): setup assistant, every setting, logo and background upload, server test, and a link generator for one customer with QR code and a ready-made email or SMS text.
+- **Admin area.** Internal `/support` (sign-in with a session limited to `/support`): setup assistant, every setting, logo and background upload, server test, and a link generator for one customer with a QR code (PNG or SVG).
 - **White-label.** Name, logo, accent colour, servers and support contact come from environment variables.
 - **Presets.** `mdaemon` (default) or `generic` (standard `.well-known` discovery), with URL templates to override either.
 - **Light and dark.** Follows the system, mobile friendly, strict Content-Security-Policy.

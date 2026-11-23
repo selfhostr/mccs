@@ -1,4 +1,4 @@
-// Vue « Liens clients » de l'espace d'administration : lien pré-rempli, QR code, e-mail et SMS.
+// Vue « Liens clients » de l'espace d'administration : lien pré-rempli et QR code.
 // Importé par admin.js (la page /support exige une session côté serveur).
 import { DEVICES, APPS, GUIDES } from '/js/guides.js';
 import { encode, toSvg, toCanvas } from '/js/qr.js';
@@ -27,7 +27,6 @@ let cfg = {
   brand: 'mccs',
   brandLogoUrl: '',
   publicUrl: location.origin,
-  support: { email: '', phone: '', hours: '', address: '' },
 };
 let current = null; // { link, email, name, device, app, qr }
 let generated = false;
@@ -63,43 +62,12 @@ function buildLink({ email, name, device, app }) {
   return String(cfg.publicUrl).replace(/\/+$/, '') + '/?' + p.toString();
 }
 
-// Phrase de contact du courriel, selon les coordonnées renseignées (toutes facultatives).
-function contactLine(s) {
-  const ways = [s.phone && `au ${s.phone}`, s.email && `à ${s.email}`].filter(Boolean);
-  if (!ways.length) return 'Si vous avez la moindre question, nous restons à votre disposition.';
-  return `Si vous avez la moindre question, nous restons à votre disposition ${ways.join(' ou ')}${s.hours ? ` (${s.hours})` : ''}.`;
-}
-
 function applyBrand() {
   document.querySelectorAll('.js-brand-name').forEach((e) => { e.textContent = cfg.brand; });
   const logo = cfg.brandLogoUrl;
   document.querySelectorAll('.js-brand-logo').forEach((img) => { if (logo) { img.src = logo; img.alt = cfg.brand; } img.hidden = !logo; });
   document.querySelectorAll('.js-brand-mark, .brand > .js-brand-name').forEach((e) => { e.hidden = !!logo; });
   document.title = 'Administration · ' + cfg.brand;
-}
-
-function mailBody({ link, email, name, device, app }) {
-  const dev = DEVICES.find((d) => d.id === device);
-  const where = dev ? ` sur votre ${dev.name}` + (app ? ` (${GUIDES[app].name})` : '') : '';
-  const s = cfg.support;
-  const lines = [
-    name ? `Bonjour ${name},` : 'Bonjour,',
-    '',
-    `Pour configurer votre adresse ${email}${where}, il vous suffit d’ouvrir le lien ci-dessous. Il vous guide pas à pas, avec vos paramètres déjà renseignés :`,
-    '',
-    link,
-    '',
-  ];
-  if (device === 'ios' || device === 'macos') lines.push('Sur iPhone, iPad ou Mac, ouvrez de préférence ce lien dans Safari.', '');
-  lines.push(
-    'Vous aurez besoin du mot de passe de votre boîte mail. Il ne vous sera jamais demandé sur cette page : vous le saisirez uniquement dans votre appareil.',
-    '',
-    contactLine(s),
-    '',
-    'Meilleures salutations,',
-    'Support ' + cfg.brand,
-  );
-  return lines.join('\r\n');
 }
 
 function render() {
@@ -131,13 +99,6 @@ function render() {
   a.textContent = data.link;
   $('#r-qr').innerHTML = toSvg(data.qr, { title: 'QR code : ' + data.link });
 
-  const at = email.lastIndexOf('@');
-  const to = encodeURIComponent(email.slice(0, at)) + '@' + email.slice(at + 1);
-  const subject = 'Configuration de votre messagerie ' + cfg.brand;
-  $('#r-mail').href = `mailto:${to}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(mailBody(data))}`;
-  const sms = `${cfg.brand} : configurez votre messagerie ${email} en suivant ce lien : ${data.link}`;
-  const phone = $('#s-phone').value.replace(/[^+\d]/g, '');
-  $('#r-sms').href = `sms:${phone}?&body=${encodeURIComponent(sms)}`;
   $('#sup-result').classList.remove('is-empty');
   return true;
 }
@@ -194,7 +155,7 @@ export function initLinks() {
     } else $('#s-email').focus();
   });
   // Une fois le premier lien généré, il suit les modifications du formulaire.
-  for (const id of ['#s-email', '#s-name', '#s-app', '#s-phone']) {
+  for (const id of ['#s-email', '#s-name', '#s-app']) {
     $(id).addEventListener(id === '#s-app' ? 'change' : 'input', () => {
       if (!generated) return;
       if (id === '#s-email' && !normalizeEmail($('#s-email').value)) return;

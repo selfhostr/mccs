@@ -68,7 +68,7 @@
       <div class="container">
         <div class="view-head">
           <h1 id="liens-title">Liens clients</h1>
-          <p>Préparez un lien vers le configurateur, pré-rempli pour un client&nbsp;: à copier, à envoyer par e-mail ou SMS, ou à faire scanner en QR code.</p>
+          <p>Préparez un lien vers le configurateur, pré-rempli pour un client&nbsp;: à copier et à lui transmettre, ou à lui faire scanner en QR code.</p>
         </div>
 
         <div class="sup-layout">
@@ -92,10 +92,6 @@
                 <select id="s-app" disabled><option value="">Au choix du client</option></select>
               </div>
             </div>
-            <div class="field">
-              <label for="s-phone">Mobile du client <span class="optional">(facultatif, pour le SMS)</span></label>
-              <input id="s-phone" type="tel" inputmode="tel" maxlength="24" placeholder="+1 555 0100">
-            </div>
             <button class="btn btn-primary btn-block" type="submit">Générer le lien</button>
           </form>
 
@@ -103,7 +99,7 @@
             <div class="sup-empty">
               <span class="sup-empty-icon" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg></span>
               <h2>Le lien apparaîtra ici</h2>
-              <p>Saisissez l’adresse du client puis cliquez sur «&nbsp;Générer le lien&nbsp;». Vous obtiendrez un lien à copier, un QR code et un message prêt à envoyer par e-mail ou SMS.</p>
+              <p>Saisissez l’adresse du client puis cliquez sur «&nbsp;Générer le lien&nbsp;». Vous obtiendrez un lien à copier et un QR code à télécharger.</p>
             </div>
             <div class="sup-filled">
             <h2>Lien pour <span id="r-who"></span></h2>
@@ -121,11 +117,6 @@
                 </div>
               </div>
             </div>
-            <div class="sup-send">
-              <a class="btn btn-primary" id="r-mail" href="mailto:">Envoyer par e-mail</a>
-              <a class="btn btn-ghost" id="r-sms" href="sms:">Envoyer par SMS</a>
-            </div>
-            <p class="field-help">Les boutons ouvrent votre messagerie ou l’app Messages avec un texte prêt à envoyer, que vous pouvez relire. Le SMS fonctionne depuis un téléphone ou un Mac relié à un iPhone.</p>
             </div>
           </section>
         </div>
