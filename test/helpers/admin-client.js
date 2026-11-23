@@ -41,12 +41,13 @@ function rawRequest(base, { method, path: p, headers, body }) {
 }
 
 // Serveur minimal autour de createAdmin, avec sa propre configuration (environnement au choix).
-function startAdmin(env) {
+// extra : options supplémentaires de createAdmin (par exemple une fonction discover de test).
+function startAdmin(env, extra = {}) {
   const { createSettings } = require('../../server/config');
   const { createAdmin } = require('../../server/admin');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'mccs-admin-'));
   const { config, settings } = createSettings({ env, dir });
-  const admin = createAdmin({ config, settings, dataDir: dir });
+  const admin = createAdmin(Object.assign({ config, settings, dataDir: dir }, extra));
   const server = http.createServer((req, res) => {
     const url = new URL(req.url, 'http://localhost');
     if (admin.handle(req, res, url)) return;

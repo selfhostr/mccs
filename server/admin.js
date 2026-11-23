@@ -6,8 +6,9 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const util = require('util');
-const { validateValues } = require('./settings');
+const { validateValues, isHost } = require('./settings');
 const { probe } = require('./probe');
+const { discover: realDiscover } = require('./discover');
 
 const scrypt = util.promisify(crypto.scrypt);
 
@@ -46,6 +47,7 @@ const ROUTES = {
   '/setup-done': ['POST'],
   '/upload': ['POST'],
   '/probe': ['POST'],
+  '/discover': ['POST'],
   '/password': ['POST'],
 };
 
@@ -102,7 +104,8 @@ async function readJson(req) {
   return data;
 }
 
-function createAdmin({ config, settings, dataDir, send = defaultSend, serveStatic = () => false, notFound }) {
+// discover : découverte CalDAV/CardDAV (remplaçable dans les tests).
+function createAdmin({ config, settings, dataDir, send = defaultSend, serveStatic = () => false, notFound, discover = realDiscover }) {
   const adminFile = path.join(dataDir, 'admin.json');
   const uploadsDir = path.join(dataDir, 'uploads');
   const sessions = new Map(); // empreinte du jeton -> expiration (ordre = du moins au plus récemment utilisé)
@@ -320,6 +323,28 @@ function createAdmin({ config, settings, dataDir, send = defaultSend, serveStati
     json(req, res, 200, await probe({ host, port: Number(port), security }), refresh);
   }
 
+  // Découverte des URL CalDAV/CardDAV : { host } = nom de serveur ou adresse http(s):// (son hôte et son port).
+  async function discoverRoute(req, res, refresh) {
+    const b = await readJson(req);
+    const raw = typeof b.host === 'string' ? b.host.trim() : '';
+    let host = raw;
+    let port = 443;
+    if (/^https?:\/\//i.test(raw)) {
+      try {
+        const u = new URL(raw);
+        host = u.hostname;
+        if (u.protocol === 'https:' && u.port) port = Number(u.port);
+      } catch { host = ''; }
+    }
+    host = host.toLowerCase().replace(/\.$/, '');
+    if (!host || raw.length > 500 || !isHost(host)) {
+      const msg = raw ? 'Nom de serveur invalide (ex. mail.example.com ou https://cloud.example.com).' : 'Nom de serveur manquant.';
+      return json(req, res, 422, { ok: false, error: 'invalid', errors: { host: msg } }, refresh);
+    }
+    const r = await discover({ host, port });
+    json(req, res, 200, { ok: true, caldav: r.caldav, carddav: r.carddav, server: r.server, details: r.details }, refresh);
+  }
+
   async function password(req, res, session, refresh) {
     const ip = clientIp(req);
     const wait = lockedFor(ip);
@@ -381,6 +406,8 @@ function createAdmin({ config, settings, dataDir, send = defaultSend, serveStati
         return upload(req, res, url, refresh);
       case '/probe':
         return probeRoute(req, res, refresh);
+      case '/discover':
+        return discoverRoute(req, res, refresh);
       case '/password':
         return password(req, res, session, refresh);
     }

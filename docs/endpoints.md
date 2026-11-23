@@ -27,6 +27,7 @@ All answers are JSON with `Cache-Control: no-store`. `POST` and `PUT` need an `O
 | `POST /support/api/setup-done` | none | 200 `{ ok: true }` |
 | `POST /support/api/upload?kind=logo\|background` | raw image, `Content-Type: image/png`, `image/jpeg` or `image/webp` | 200 `{ ok: true, path: "/uploads/..." }`; 415 wrong type or magic bytes; 413 over 2 MB |
 | `POST /support/api/probe` | `{ host, port, security: "SSL/TLS" \| "STARTTLS" }` | 200 `{ ok: true, greeting, tls: { authorized, subject } }` or `{ ok: false, error: "unreachable" \| "timeout" \| "tls" \| "protocol", detail }` (8 s timeout); 422 on an invalid host, port or security |
+| `POST /support/api/discover` | `{ host }`: a host name or an `http(s)://` address (its host and port are used) | 200 `{ ok: true, caldav, carddav, server: "mdaemon" \| "generic", details }`, where `caldav` and `carddav` are `{ url, via: "dns" \| "well-known" }` or `null` and `details` lists each step in French (8 s timeout); 422 `{ ok: false, error: "invalid", errors: { host } }` |
 | `POST /support/api/password` | `{ current, next }` | 200 `{ ok: true }`; 401 wrong `current`; 422 `next` shorter than 12 characters |
 
 When `/data` is not writable, `setup-done`, `upload` and `password` answer 409 `{ ok: false, error: "readonly" }`.
