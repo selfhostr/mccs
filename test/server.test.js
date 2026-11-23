@@ -53,3 +53,21 @@ test('un nom avec apostrophe typographique ne fait pas planter /support', async 
   assert.equal(r.status, 302);
   assert.equal(r.headers.get('location'), '/support/login.html');
 });
+
+test('POST /api/test : 404 tant que l’option est désactivée, puis servi par le serveur principal', async () => {
+  const cfg = await (await fetch(base + '/api/config')).json();
+  assert.equal(cfg.connectionTest, false);
+  let r = await fetch(base + '/api/test', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: base }, body: '{}' });
+  assert.equal(r.status, 404);
+  settings.save({ CONNECTION_TEST: 'true' });
+  assert.equal((await (await fetch(base + '/api/config')).json()).connectionTest, true);
+  r = await fetch(base + '/api/test', { method: 'POST', headers: { 'Content-Type': 'application/json', Origin: base }, body: JSON.stringify({ email: 'x', password: 'y' }) });
+  assert.equal(r.status, 422);
+  assert.equal(r.headers.get('x-frame-options'), 'DENY');
+  settings.save({ CONNECTION_TEST: '' });
+});
+
+test('les autres routes refusent toujours POST', async () => {
+  const r = await fetch(base + '/api/config', { method: 'POST', headers: { Origin: base } });
+  assert.equal(r.status, 405);
+});

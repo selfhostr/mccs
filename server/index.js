@@ -10,6 +10,7 @@ const { normalizeEmail, normalizeName } = require('./validate');
 const { buildProfile, parseServices } = require('./mobileconfig');
 const { buildAutoconfig } = require('./autoconfig');
 const { createAdmin } = require('./admin');
+const { createConnectionTest } = require('./connection-test');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
@@ -195,6 +196,8 @@ function handleAutoconfig(req, res, q) {
 
 // Espace d'administration (/support, /support/api/*) et fichiers envoyés (/uploads/*).
 const admin = createAdmin({ config, settings, dataDir: DATA_DIR, send, serveStatic, notFound });
+// Vérification du mot de passe par le client (POST /api/test), si l'option est activée.
+const connectionTest = createConnectionTest({ config, send, notFound });
 
 const server = http.createServer((req, res) => {
   let url;
@@ -205,8 +208,9 @@ const server = http.createServer((req, res) => {
   }
   const p = url.pathname;
   try {
-    // POST et PUT ne sont acceptés que sur /support/api/* (vérifié dans admin.js).
+    // POST et PUT ne sont acceptés que sur /support/api/* (vérifié dans admin.js) et POST sur /api/test.
     if (admin.handle(req, res, url)) return;
+    if (connectionTest.handle(req, res, url)) return;
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       return send(req, res, 405, 'Méthode non autorisée.\n', { Allow: 'GET, HEAD', 'Content-Type': 'text/plain; charset=utf-8' });
     }
