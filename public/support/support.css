@@ -322,3 +322,27 @@
 .upload { position: relative; display: inline-flex; }
 .field .upload input[type="file"] { position: absolute; left: 0; top: 0; width: 1px; height: 1px; min-height: 0; padding: 0; border: 0; opacity: 0; overflow: hidden; pointer-events: none; }
 .adm code.nowrap { white-space: nowrap; }
+
+/* ---------- Interrupteur (CONNECTION_TEST) ---------- */
+.field .switch { display: inline-flex; align-items: center; gap: 12px; margin: 0; min-height: 44px; font-weight: 500; font-size: .94rem; cursor: pointer; position: relative; }
+.field .switch-input { position: absolute; opacity: 0; width: 52px; height: 30px; min-height: 0; margin: 0; padding: 0; cursor: pointer; }
+.switch-track { position: relative; flex: none; width: 52px; height: 30px; border-radius: 999px; background: var(--surface-2); border: 1px solid var(--field-border); transition: background .2s, border-color .2s; }
+.switch-track::after { content: ""; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--muted); transition: transform .2s, background .2s; }
+.switch-input:checked + .switch-track { background: var(--accent-strong); border-color: var(--accent-strong); }
+.switch-input:checked + .switch-track::after { transform: translateX(22px); background: var(--on-accent); }
+.switch-input:focus-visible + .switch-track { outline: 2px solid var(--text); outline-offset: 2px; }
+.switch-input:disabled + .switch-track { opacity: .55; }
+.switch-text { color: var(--text); }
+.ct-block { margin-top: 8px; padding-top: 18px; border-top: 1px solid var(--border); }
+.wiz-step .ct-block .afield, .set-sec .ct-block > .afield { max-width: 720px; }
+
+/* ---------- Messages d'aide ---------- */
+.field textarea.msg-input {
+  display: block; width: 100%; min-height: 96px; field-sizing: content; resize: vertical; font: inherit; font-size: .92rem; line-height: 1.5; color: var(--text);
+  background: var(--bg-2); border: 1px solid var(--field-border); border-radius: var(--radius-sm); padding: 10px 12px;
+}
+.field textarea.msg-input::placeholder { color: var(--muted); opacity: .85; }
+.field textarea.msg-input:focus { border-color: var(--accent-text); box-shadow: var(--focus); outline: none; }
+.field textarea.msg-input[readonly] { opacity: .7; }
+.set-note { color: var(--warn-text); background: var(--warn-bg); border: 1px solid var(--warn-border); border-radius: var(--radius-sm); padding: 8px 12px; font-size: .86rem; }
+.msg-grid { gap: 0 20px; }

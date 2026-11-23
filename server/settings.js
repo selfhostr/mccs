@@ -25,9 +25,9 @@ const FIELDS = [
   { key: 'WEBMAIL_URL', group: 'servers', label: 'Adresse du webmail', type: 'url' },
   { key: 'ALLOWED_DOMAINS', group: 'servers', label: 'Domaines acceptés', type: 'domains' },
   // Vérification du mot de passe par le client (POST /api/test), désactivée par défaut.
-  { key: 'CONNECTION_TEST', group: 'test', label: 'Vérifier le mot de passe des clients', type: 'toggle' },
-  { key: 'CONNECTION_TEST_MAX_PER_EMAIL', group: 'test', label: 'Essais par adresse e-mail (15 minutes)', type: 'count' },
-  { key: 'CONNECTION_TEST_MAX_PER_IP', group: 'test', label: 'Essais par adresse IP (15 minutes)', type: 'count' },
+  { key: 'CONNECTION_TEST', group: 'test', label: 'Vérifier le mot de passe des clients', type: 'toggle', default: 'false' },
+  { key: 'CONNECTION_TEST_MAX_PER_EMAIL', group: 'test', label: 'Essais par adresse e-mail (15 minutes)', type: 'count', default: '5' },
+  { key: 'CONNECTION_TEST_MAX_PER_IP', group: 'test', label: 'Essais par adresse IP (15 minutes)', type: 'count', default: '20' },
   // Calendrier et contacts
   // Déduit par la détection automatique de l'admin (jamais présenté comme une liste) ; accepté dans le .env.
   { key: 'DAV_PRESET', group: 'dav', label: 'Type de serveur', type: 'preset', options: PRESETS, detected: true },

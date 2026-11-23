@@ -51,13 +51,13 @@ function messageFields() {
     for (const service of ['imap', 'smtp']) {
       if (service === 'imap' && status === 'skipped') continue;
       out.push({
-        key: keyOf(service, status), group: 'messages', type: 'message', status, service,
+        key: keyOf(service, status), group: 'messages', type: 'message', status, service, default: DEFAULTS[service][status],
         label: `${service === 'imap' ? 'Réception' : 'Envoi'} : ${LABELS[status].toLowerCase()}`,
       });
     }
   }
-  out.push({ key: 'TEST_MSG_RATE_LIMITED', group: 'messages', type: 'message', status: 'rate_limited', label: 'Trop de vérifications' });
-  out.push({ key: 'TEST_MSG_DOMAIN', group: 'messages', type: 'message', status: 'domain', label: 'Domaine non accepté' });
+  out.push({ key: 'TEST_MSG_RATE_LIMITED', group: 'messages', type: 'message', status: 'rate_limited', label: 'Trop de vérifications', default: DEFAULTS.rate_limited });
+  out.push({ key: 'TEST_MSG_DOMAIN', group: 'messages', type: 'message', status: 'domain', label: 'Domaine non accepté', default: DEFAULTS.domain });
   return out;
 }
 

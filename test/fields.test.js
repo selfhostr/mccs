@@ -51,3 +51,25 @@ test('aide du téléphone : exemple neutre, sans indicatif suisse', async () => 
   assert.doesNotMatch(HELP.SUPPORT_PHONE, /\+41/);
   assert.doesNotMatch(HELP.PROFILE_ID_PREFIX, /\bch\./);
 });
+
+test('resolver : la valeur intégrée transmise par le serveur (field.default) sert de repli', async () => {
+  const { resolver } = await load();
+  const m = new Map([['TEST_MSG_IMAP_OK', { field: { key: 'TEST_MSG_IMAP_OK', source: 'admin', default: 'Texte intégré', envValue: '' }, value: '' }]]);
+  assert.equal(resolver(m).resolve('TEST_MSG_IMAP_OK'), 'Texte intégré');
+  const t = new Map([['CONNECTION_TEST', { field: { key: 'CONNECTION_TEST', source: 'admin', default: 'false', envValue: 'true' }, value: '' }]]);
+  assert.equal(resolver(t).resolve('CONNECTION_TEST'), 'true');
+});
+
+test('check : interrupteur, nombre d’essais et message, mêmes règles que le serveur', async () => {
+  const { check, isOn } = await load();
+  assert.equal(check('toggle', 'true'), '');
+  assert.notEqual(check('toggle', 'oui'), '');
+  assert.equal(check('count', '20'), '');
+  for (const bad of ['0', '-3', '1.5', 'x', '10001']) assert.notEqual(check('count', bad), '', bad);
+  assert.equal(check('message', 'Ligne 1\nLigne 2'), '');
+  assert.notEqual(check('message', 'a\u0007b'), '');
+  assert.equal(isOn('true'), true);
+  assert.equal(isOn('1'), true);
+  assert.equal(isOn('false'), false);
+  assert.equal(isOn(''), false);
+});

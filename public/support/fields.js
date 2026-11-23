@@ -39,6 +39,9 @@ export const HELP = {
   SUPPORT_PHONE: 'Tel que vos clients doivent le composer. Ajoutez l’indicatif du pays (+…) si certains appellent de l’étranger, et le poste éventuel, par exemple +1 555 010 0100 ext. 12.',
   SUPPORT_HOURS: 'Par exemple : du lundi au vendredi, de 8 h à 17 h.',
   PROFILE_ORGANIZATION: 'Le nom affiché sur l’iPhone, l’iPad ou le Mac quand le client installe le profil.',
+  CONNECTION_TEST: 'Sur la page d’accueil, le client saisit aussi son mot de passe : mccs se connecte à vos serveurs de réception puis d’envoi pour vérifier qu’il fonctionne, avant de le guider. Le mot de passe n’est ni enregistré ni journalisé.',
+  CONNECTION_TEST_MAX_PER_EMAIL: 'Au-delà, la vérification est refusée pour cette adresse pendant 15 minutes. Gardez ce nombre plus bas que le seuil de blocage de votre serveur mail.',
+  CONNECTION_TEST_MAX_PER_IP: 'Toutes adresses confondues, depuis un même appareil ou réseau. Derrière un proxy, l’adresse IP réelle n’est connue que si TRUSTED_PROXY_HEADER est réglé.',
   PROFILE_ID_PREFIX: 'Un identifiant technique, écrit comme un nom de domaine à l’envers (par exemple com.example.mail). Évitez de le changer : les appareils s’en servent pour reconnaître le profil.',
 };
 
@@ -49,6 +52,8 @@ const OPTION_LABELS = {
   generic: 'Serveur CalDAV/CardDAV standard',
 };
 export const optionLabel = (v) => OPTION_LABELS[v] || v;
+// Interrupteur : valeur « vraie » (le .env accepte aussi 1, on, yes, oui).
+export const isOn = (v) => /^(1|true|on|yes|oui)$/i.test(String(v || '').trim());
 
 const SOURCE_LABELS = { default: 'par défaut', env: '.env', admin: 'modifié ici' };
 const SOURCE_TITLES = {
@@ -96,6 +101,9 @@ const CHECKS = {
   email: (v) => (EMAIL_RE.test(v) ? '' : 'Adresse e-mail invalide.'),
   phone: (v, raw) => (isPhone(raw) ? '' : 'Numéro de téléphone invalide : des chiffres, avec + et l’indicatif du pays si besoin (ex. +1 555 010 0100, poste « ext. 12 »).'),
   'reverse-dns': (v) => (/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(v) ? '' : 'Format attendu : com.example.mailsetup.'),
+  toggle: (v, raw) => (raw === 'true' || raw === 'false' ? '' : 'Valeur attendue : true ou false.'),
+  count: (v) => (/^\d{1,5}$/.test(v) && +v >= 1 && +v <= 10000 ? '' : 'Nombre entier entre 1 et 10000.'),
+  message: (v, raw) => (/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/.test(raw) ? 'Caractère de contrôle refusé.' : ''),
   domains: (v) => {
     const bad = v.split(',').map((s) => s.trim()).filter((d) => d && !isHost(d));
     return bad.length ? `Domaine invalide : ${bad.join(', ')} (ex. example.com).` : '';
@@ -145,6 +153,8 @@ export function resolver(entries) {
     const f = e && e.field;
     // Valeur du .env (même quand un réglage « modifié ici » la masque) : c'est elle qui s'applique si l'on vide le champ.
     if (f && f.envValue) return f.envValue;
+    // Valeur intégrée donnée par le serveur (interrupteur, limites, messages d'aide).
+    if (f && f.default !== undefined) return f.default;
     const mail = () => resolve('MAIL_HOST');
     const base = () => resolve('DAV_BASE_URL').replace(/\/+$/, '');
     switch (k) {
@@ -210,12 +220,12 @@ const UPLOAD_MAX = 2 * 1024 * 1024;
 /* ---------- Éditeurs par type ---------- */
 function textEditor(field, id, emit) {
   const t = field.type;
-  const mono = ['host', 'port', 'url', 'template', 'reverse-dns'].includes(t);
+  const mono = ['host', 'port', 'count', 'url', 'template', 'reverse-dns'].includes(t);
   const input = h('input', {
     id,
     type: t === 'email' ? 'email' : t === 'phone' ? 'tel' : 'text',
-    inputmode: t === 'port' ? 'numeric' : t === 'host' || t === 'url' || t === 'template' ? 'url' : t === 'email' ? 'email' : t === 'phone' ? 'tel' : undefined,
-    maxlength: t === 'port' ? '5' : '500',
+    inputmode: t === 'port' || t === 'count' ? 'numeric' : t === 'host' || t === 'url' || t === 'template' ? 'url' : t === 'email' ? 'email' : t === 'phone' ? 'tel' : undefined,
+    maxlength: t === 'port' || t === 'count' ? '5' : '500',
     class: mono ? 'is-mono' : undefined,
     autocomplete: 'off',
     autocapitalize: t === 'text' ? undefined : 'off',
@@ -443,7 +453,54 @@ function domainsEditor(field, id, emit, ctx) {
   };
 }
 
-const EDITORS = { security: selectEditor, preset: selectEditor, color: colorEditor, logo: logoEditor, background: backgroundEditor, domains: domainsEditor };
+// Interrupteur : '' suit la valeur par défaut (ou du .env) ; sinon « true » ou « false ».
+// Remettre l'interrupteur dans l'état par défaut retire la valeur saisie ici.
+function toggleEditor(field, id, emit) {
+  const box = h('input', { id, type: 'checkbox', role: 'switch', class: 'switch-input' });
+  const text = h('span', { class: 'switch-text' });
+  let val = '';
+  let ph = 'false';
+  const paint = () => {
+    box.checked = isOn(val || ph);
+    text.textContent = box.checked ? 'Activée' : 'Désactivée';
+  };
+  box.addEventListener('change', () => {
+    const want = box.checked ? 'true' : 'false';
+    val = want === (isOn(ph) ? 'true' : 'false') ? '' : want;
+    paint();
+    emit();
+  });
+  const node = h('label', { class: 'switch', for: id }, box, h('span', { class: 'switch-track', 'aria-hidden': 'true' }), text);
+  return {
+    node, input: box,
+    get: () => val,
+    set: (v) => { val = v === 'true' || v === 'false' ? v : ''; paint(); },
+    hint: (t) => { ph = t || 'false'; paint(); },
+    disable: (b) => { box.disabled = b; },
+    // Valeur effective affichée par l'interrupteur (utile aux encadrés qui en dépendent).
+    on: () => box.checked,
+  };
+}
+
+// Message montré au client : zone de texte ; vide = texte par défaut (en gris). Au premier clic dans une
+// zone vide, le texte par défaut est recopié pour être retouché ; inchangé, il compte toujours comme vide.
+function messageEditor(field, id, emit) {
+  const ta = h('textarea', { id, rows: '4', maxlength: '500', class: 'msg-input', oninput: emit });
+  let ph = '';
+  ta.addEventListener('focus', () => {
+    if (!ta.value && ph && !ta.readOnly) { ta.value = ph; ta.setSelectionRange(ph.length, ph.length); }
+  });
+  ta.addEventListener('blur', () => { if (ta.value.trim() === ph.trim()) { ta.value = ''; emit(); } });
+  return {
+    node: ta, input: ta,
+    get: () => (ta.value.trim() === ph.trim() ? '' : ta.value),
+    set: (v) => { ta.value = v; },
+    hint: (t) => { ph = t || ''; ta.placeholder = ph; },
+    disable: (b) => { ta.readOnly = b; },
+  };
+}
+
+const EDITORS = { toggle: toggleEditor, message: messageEditor, security: selectEditor, preset: selectEditor, color: colorEditor, logo: logoEditor, background: backgroundEditor, domains: domainsEditor };
 
 /* ---------- Contrôle complet : libellé, provenance, éditeur, aide, erreur ---------- */
 // opts : { meta: bool (provenance et « Revenir au défaut »), onChange(ctrl), onReset(ctrl), upload(kind, file) }
@@ -507,6 +564,7 @@ export function createControl(field, opts = {}) {
   };
   ctrl.setReadOnly = (b) => { readOnly = b; editor.disable(b); paintMeta(); };
   ctrl.focus = () => { if (editor.input) editor.input.focus(); };
+  ctrl.isOn = () => (editor.on ? editor.on() : isOn(editor.get()));
   // Valide la valeur saisie ; un domaine en cours de saisie est d'abord ajouté.
   ctrl.validate = () => {
     if (editor.flush && !editor.flush()) return false;

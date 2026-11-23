@@ -112,3 +112,11 @@ test('messages d’aide : un réglage par statut et par service, texte libre sur
   assert.ok(validateValues({ TEST_MSG_IMAP_AUTH_FAILED: 'a\u0000b' }).TEST_MSG_IMAP_AUTH_FAILED);
   assert.ok(validateValues({ TEST_MSG_IMAP_AUTH_FAILED: 'x'.repeat(501) }).TEST_MSG_IMAP_AUTH_FAILED);
 });
+
+test('les réglages du test de connexion indiquent leur valeur intégrée (field.default)', () => {
+  const by = Object.fromEntries(FIELDS.map((f) => [f.key, f]));
+  assert.equal(by.CONNECTION_TEST.default, 'false');
+  assert.equal(by.CONNECTION_TEST_MAX_PER_EMAIL.default, '5');
+  assert.equal(by.CONNECTION_TEST_MAX_PER_IP.default, '20');
+  assert.match(by.TEST_MSG_IMAP_AUTH_FAILED.default, /mot de passe/);
+});

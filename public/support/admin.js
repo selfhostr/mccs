@@ -1,6 +1,6 @@
 // Espace d'administration /support : assistant d'installation, réglages, liens clients et compte.
 // Contrat d'API : docs/superpowers/plans/2026-11-21-pr3-espace-admin.md (routes /support/api/*).
-import { createControl, resolver, exampleEmail, davUrl, backgroundCss, optionLabel, isHost, presetFor, DEFAULTS, h, ICONS } from '/support/fields.js';
+import { createControl, resolver, exampleEmail, davUrl, backgroundCss, optionLabel, isHost, isOn, presetFor, DEFAULTS, h, ICONS } from '/support/fields.js';
 import { initLinks, reloadConfig, toast } from '/support/support.js';
 
 const $ = (s, root = document) => root.querySelector(s);
@@ -127,6 +127,10 @@ function probeText(kind, r) {
   return { ok: false, title: 'Test impossible', text: failMessage(r) };
 }
 
+// Message d'accueil d'un serveur testé : MDaemon s'y nomme (sert à l'encadré Dynamic Screening).
+let probeSaysMdaemon = false;
+const probeListeners = new Map(); // vue -> fonction de mise à jour (une par vue, remplacée à chaque reconstruction)
+
 // Bloc « Réception » ou « Envoi » : hôte, port, sécurité et bouton « Tester ».
 function serverBlock(kind, ctrls, getResolve) {
   const P = kind === 'imap' ? 'IMAP' : 'SMTP';
@@ -150,6 +154,7 @@ function serverBlock(kind, ctrls, getResolve) {
       const map = { host, port, security: sec };
       for (const [k, msg] of Object.entries(r.data.errors)) if (map[k]) map[k].setError(msg);
     }
+    if (r.status === 200 && r.data.greeting && /mdaemon/i.test(r.data.greeting)) { probeSaysMdaemon = true; probeListeners.forEach((fn) => fn()); }
     const m = probeText(kind, r);
     result.replaceChildren(h('div', { class: 'probe-msg ' + (m.ok ? 'is-ok' : 'is-err') },
       h('span', { class: 'probe-icon', html: m.ok ? CHECK_ICON : WARN_ICON }),
@@ -168,16 +173,26 @@ function serverBlock(kind, ctrls, getResolve) {
     result);
 }
 
+// Serveur mail MDaemon : détecté par le test d'un serveur, ou type de serveur fixé (.env, admin, détection).
+function knownMdaemon(resolve, ctrls) {
+  const f = fieldMap().get('DAV_PRESET');
+  const c = ctrls.get('DAV_PRESET');
+  const explicit = Boolean(c && c.value.trim()) || Boolean(f && f.source !== 'default');
+  return probeSaysMdaemon || (explicit && resolve('DAV_PRESET') === 'mdaemon');
+}
+
+// Encadré « liste blanche » : seulement quand la vérification du mot de passe est activée.
 function whitelistAdvice() {
-  const mdaemon = callout('', INFO_ICON, 'Avec MDaemon : Dynamic Screening',
-    h('p', { text: 'Ouvrez Sécurité › Dynamic Screening, puis ajoutez l’adresse IP de mccs à la liste d’autorisation (« Dynamic Allow List », anciennement « whitelist »). Sinon, Dynamic Screening peut bloquer cette adresse après quelques mots de passe erronés.' }));
+  const mdaemon = callout('', INFO_ICON, 'Avec MDaemon : Dynamic Screening',
+    h('p', { text: 'Ouvrez Sécurité › Dynamic Screening, puis ajoutez l’adresse IP de mccs à la liste d’autorisation (« Dynamic Allow List », anciennement « whitelist »). Sinon, Dynamic Screening peut bloquer cette adresse après quelques mots de passe erronés.' }));
   mdaemon.classList.add('adm-callout-sub');
   const node = h('div', { class: 'advice' },
     callout('warn', SHIELD_ICON, 'Ajoutez mccs à la liste blanche de votre serveur mail',
-      h('p', { text: 'Pour vérifier le mot de passe de vos clients, le configurateur se connecte à votre serveur mail. Toutes ces connexions viennent de la même adresse IP : celle du serveur qui héberge mccs.' }),
-      h('p', { text: 'Ajoutez cette adresse à la liste blanche de la protection contre les attaques par force brute. Sans cela, quelques mots de passe erronés suffisent à faire bloquer mccs : plus aucun client ne peut alors vérifier sa connexion, parfois pendant des heures.' })),
+      h('p', { text: 'Le navigateur du client ne peut pas parler aux serveurs mail (IMAP, SMTP) : c’est le serveur qui héberge mccs qui se connecte à votre serveur mail pour vérifier chaque mot de passe. Toutes ces vérifications viennent donc de la même adresse IP, celle de mccs.' }),
+      h('p', { text: 'Ajoutez cette adresse à la liste blanche de la protection contre les attaques par force brute. Sans cela, quelques mots de passe erronés de plusieurs clients suffisent à faire bloquer mccs : plus aucun client ne peut alors vérifier sa connexion, parfois pendant des heures. mccs limite déjà les essais par adresse e-mail et par appareil.' })),
     mdaemon);
-  return { node, update: (resolve) => { mdaemon.hidden = resolve('DAV_PRESET') !== 'mdaemon'; } };
+  // on : vérification activée ; md : serveur MDaemon reconnu.
+  return { node, update: (on, md) => { node.hidden = !on; mdaemon.hidden = !md; } };
 }
 
 function davPreview() {
@@ -313,6 +328,7 @@ function display(key, type, v) {
     return { BRAND_LOGO_URL: 'Aucun logo', BRAND_ACCENT: 'Bleu encre (par défaut)', BRAND_BACKGROUND: 'Fond neutre (par défaut)', ALLOWED_DOMAINS: 'Toutes les adresses' }[key] || 'Non affiché';
   }
   if (type === 'security' || type === 'preset') return optionLabel(v);
+  if (type === 'toggle') return isOn(v) ? 'Activée' : 'Désactivée';
   if (type === 'background') return v.includes(',') ? 'Dégradé ' + v.replace(',', ' → ') : v.startsWith('#') ? 'Couleur ' + v : 'Image ' + v.split('/').pop();
   if (type === 'domains') return v.split(',').join(', ');
   if (type === 'logo') return v.startsWith('/uploads/') ? 'Image envoyée (' + v.split('/').pop() + ')' : v;
@@ -322,7 +338,7 @@ function display(key, type, v) {
 /* ================= Assistant d'installation ================= */
 const STEPS = [
   { short: 'Marque', title: 'Votre marque', lead: 'Le nom, le logo et les couleurs que vos clients verront sur le configurateur.', keys: ['BRAND_NAME', 'BRAND_LOGO_URL', 'BRAND_ACCENT', 'BRAND_BACKGROUND'] },
-  { short: 'Serveurs mail', title: 'Vos serveurs mail', lead: 'Les serveurs auxquels les applications de vos clients se connecteront. Testez-les avant de continuer.', keys: ['MAIL_HOST', 'IMAP_HOST', 'IMAP_PORT', 'IMAP_SECURITY', 'SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURITY', 'WEBMAIL_URL'] },
+  { short: 'Serveurs mail', title: 'Vos serveurs mail', lead: 'Les serveurs auxquels les applications de vos clients se connecteront. Testez-les avant de continuer.', keys: ['MAIL_HOST', 'IMAP_HOST', 'IMAP_PORT', 'IMAP_SECURITY', 'SMTP_HOST', 'SMTP_PORT', 'SMTP_SECURITY', 'WEBMAIL_URL', 'CONNECTION_TEST'] },
   { short: 'Calendrier', title: 'Calendrier et contacts', lead: 'Où les applications synchronisent l’agenda et le carnet d’adresses de vos clients. mccs les cherche lui-même sur votre serveur.', keys: ['DAV_PRESET', 'DAV_BASE_URL', 'DAV_DISCOVERY_URL', 'DAV_CARD_DISCOVERY_URL'] },
   { short: 'Accès et support', title: 'Domaines acceptés et contact support', lead: 'Qui peut utiliser le configurateur, et comment vos clients vous joignent en cas de besoin.', keys: ['ALLOWED_DOMAINS', 'SUPPORT_PHONE', 'SUPPORT_EMAIL', 'SUPPORT_HOURS', 'SUPPORT_ADDRESS'] },
   { short: 'Récapitulatif', title: 'Vérifiez, puis mettez en ligne', lead: 'Rien n’est encore enregistré. « Mettre en ligne » applique ces réglages tout de suite au site client.', keys: [] },
@@ -354,12 +370,14 @@ function startWizard() {
     h('div', { class: 'adv-body' }, C('DAV_BASE_URL'), C('DAV_DISCOVERY_URL'), C('DAV_CARD_DISCOVERY_URL')));
   wiz.detect.setAdvanced(davAdv);
   wiz.advice = whitelistAdvice();
+  probeListeners.set('wizard', () => { if (wiz.started && !wiz.finished) paintWizard(); });
   wiz.recap = h('div', { class: 'recap' });
   wiz.banner = h('div', { class: 'wiz-banner', hidden: true });
 
   const bodies = [
     h('div', { class: 'wiz-brand' }, h('div', { class: 'wiz-col' }, C('BRAND_NAME'), C('BRAND_LOGO_URL'), C('BRAND_ACCENT'), C('BRAND_BACKGROUND')), h('div', { class: 'wiz-aside' }, wiz.preview.node)),
-    h('div', {}, C('MAIL_HOST'), h('div', { class: 'srv-grid' }, serverBlock('imap', wiz.ctrls, resolve), serverBlock('smtp', wiz.ctrls, resolve)), C('WEBMAIL_URL'), wiz.advice.node),
+    h('div', {}, C('MAIL_HOST'), h('div', { class: 'srv-grid' }, serverBlock('imap', wiz.ctrls, resolve), serverBlock('smtp', wiz.ctrls, resolve)), C('WEBMAIL_URL'),
+      h('div', { class: 'ct-block' }, C('CONNECTION_TEST'), wiz.advice.node)),
     h('div', {}, wiz.detect.node, wiz.dav.node, davAdv),
     h('div', {}, C('ALLOWED_DOMAINS'), h('h3', { class: 'wiz-sub', text: 'Contact support' }), h('p', { class: 'wiz-sub-lead', text: 'Affiché à vos clients s’ils ont besoin d’aide. Tout est facultatif : un champ vide n’apparaît pas.' }), h('div', { class: 'grid-2' }, C('SUPPORT_PHONE'), C('SUPPORT_EMAIL'), C('SUPPORT_HOURS'), C('SUPPORT_ADDRESS'))),
     h('div', {}, wiz.banner, wiz.recap),
@@ -392,7 +410,7 @@ function paintWizard() {
   wiz.preview.update(r.resolve, (fieldMap().get('BRAND_LOGO_URL') || {}).effective);
   wiz.dav.update(r.resolve);
   wiz.detect.update(r);
-  wiz.advice.update(r.resolve);
+  wiz.advice.update(isOn(r.resolve('CONNECTION_TEST')), knownMdaemon(r.resolve, wiz.ctrls));
   return r;
 }
 
@@ -515,6 +533,8 @@ function showWizardDone() {
 const SECTIONS = [
   { group: 'brand', title: 'Marque', lead: 'Le nom, le logo et les couleurs de la page que voient vos clients.' },
   { group: 'servers', title: 'Serveurs mail', lead: 'Les serveurs auxquels les applications de vos clients se connectent, et les adresses autorisées.' },
+  { group: 'test', title: 'Vérification du mot de passe', lead: 'Facultatif : le client vérifie son adresse et son mot de passe avant de configurer son appareil.' },
+  { group: 'messages', title: 'Messages d’aide', lead: 'Ce que lit le client après la vérification de son mot de passe, pour chaque résultat. Texte simple ; un retour à la ligne commence un nouveau paragraphe. Vide : le texte par défaut, en gris.' },
   { group: 'dav', title: 'Calendrier et contacts', lead: 'Les adresses de synchronisation de l’agenda (CalDAV) et des contacts (CardDAV), détectées sur votre serveur.' },
   { group: 'public', title: 'Adresse publique', lead: 'L’adresse de ce configurateur, utilisée dans les liens et QR codes envoyés à vos clients.' },
   { group: 'support', title: 'Contact support', lead: 'Les coordonnées montrées à vos clients s’ils ont besoin d’aide. Tout est facultatif : un champ vide n’apparaît pas.' },
@@ -574,6 +594,19 @@ function rebuildSettings() {
         h('div', { class: 'adv-body' }, first, rest));
       det.setAdvanced(adv);
       body = h('div', {}, det.node, pv.node, adv);
+    } else if (s.group === 'test') {
+      const advice = whitelistAdvice();
+      const paint = (r) => advice.update(isOn(r.resolve('CONNECTION_TEST')), knownMdaemon(r.resolve, set.ctrls));
+      set.updaters.push(paint);
+      probeListeners.set('settings', () => paint(getResolver()));
+      body = h('div', { class: 'ct-block' }, take('CONNECTION_TEST'), advice.node, h('div', { class: 'grid-2' }, take('CONNECTION_TEST_MAX_PER_EMAIL'), take('CONNECTION_TEST_MAX_PER_IP')), keys.map(take));
+    } else if (s.group === 'messages') {
+      const off = h('p', { class: 'set-note' });
+      set.updaters.push((r) => {
+        off.hidden = isOn(r.resolve('CONNECTION_TEST'));
+        off.textContent = 'La vérification du mot de passe est désactivée : ces messages ne sont pas montrés pour le moment.';
+      });
+      body = h('div', {}, off, h('div', { class: 'grid-2 msg-grid' }, keys.map(take)));
     } else if (s.group === 'support') {
       body = h('div', { class: 'grid-2' }, keys.map(take));
     } else {
