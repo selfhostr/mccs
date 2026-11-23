@@ -4,24 +4,13 @@ All notable changes to mccs. The format follows [Keep a Changelog](https://keepa
 
 ## Unreleased
 
+## [1.0.0] - 2026-11-23
+
 ### Added
 
 - Prebuilt image `ghcr.io/selfhostr/mccs` (amd64, arm64), published by the release workflow: `vX.Y.Z` tags give `:X.Y.Z`, `:X.Y`, `:X` and `:latest`, `main` gives `:edge`.
 - `docker-compose.build.yml` to build from a checkout.
 - First start without `SUPPORT_PASSWORD` generates an admin password, printed in the logs (user `support`, address of `/support`) until the admin changes it; a banner invites the admin to change it.
-
-### Changed
-
-- Install is now `curl -O` of `docker-compose.yml`, `docker compose up -d` and `docker compose logs mccs`. The compose file no longer reads variables and `.env.example` is gone; everything is set from `/support`. Environment variables are still read, as an advanced option under `environment:`.
-- `HOST_PORT`, `IMAGE_NAME` and `CONTAINER_NAME` are removed; change the port in the `ports` line.
-- `PUBLIC_URL` is empty by default and follows the address used by the browser (it was `https://config.example.com`).
-- `/support` is always active; it answers 404 only when `/data` is not writable and `SUPPORT_PASSWORD` is not set.
-- Upgrade with `docker compose pull && docker compose up -d`.
-
-## [1.0.0] - 2026-11-23
-
-### Added
-
 - Outlook mobile guide for iPhone, iPad and Android (mail).
 - Self-service setup wizard for mail (IMAP/SMTP), calendar (CalDAV) and contacts (CardDAV), with Apple profiles, autoconfig and a password-protected support page.
 - Community files (security policy, contributing guide, code of conduct), a CI workflow and Dependabot configuration.
@@ -33,6 +22,11 @@ All notable changes to mccs. The format follows [Keep a Changelog](https://keepa
 
 ### Changed
 
+- Install is now `curl -O` of `docker-compose.yml`, `docker compose up -d` and `docker compose logs mccs`. The compose file no longer reads variables and `.env.example` is gone; everything is set from `/support`. Environment variables are still read, as an advanced option under `environment:`.
+- `HOST_PORT`, `IMAGE_NAME` and `CONTAINER_NAME` are removed; change the port in the `ports` line.
+- `PUBLIC_URL` is empty by default and follows the address used by the browser (it was `https://config.example.com`).
+- `/support` is always active; it answers 404 only when `/data` is not writable and `SUPPORT_PASSWORD` is not set.
+- Upgrade with `docker compose pull && docker compose up -d`.
 - Real brand logos (Windows, macOS, iPhone/iPad, Android, Outlook, Thunderbird, Gmail, Samsung, Apple) for devices and apps, replacing generic pictograms (Simple Icons, CC0; Windows and Outlook drawn for the project; see `public/img/brands/README.md`).
 - Pages no longer scroll when their content fits the screen (flex body instead of a fixed `calc()` height).
 - Slimmer one-line footer with support phone and e-mail icons, stacked and centred on mobile.
