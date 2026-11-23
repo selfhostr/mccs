@@ -114,6 +114,29 @@ function createAdmin({ config, settings, dataDir, send = defaultSend, serveStati
     writeAtomic(adminFile, JSON.stringify({ version: ADMIN_VERSION, password: next.password, setupDone: next.setupDone }, null, 2) + '\n', 0o600);
   }
 
+  // Premier démarrage sans SUPPORT_PASSWORD ni admin.json : mot de passe généré, haché dans admin.json
+  // et gardé en clair dans initial-password (0600) pour être rappelé dans les logs à chaque démarrage,
+  // jusqu'à ce que l'admin le change. Renvoie { password } ou null.
+  const initialFile = path.join(dataDir, 'initial-password');
+  function firstRun() {
+    if (!settings.writable || config.supportAuth.password) return null;
+    const a = readAdmin();
+    if (a.state === 'missing') {
+      const pw = crypto.randomBytes(18).toString('base64url');
+      const salt = crypto.randomBytes(16);
+      const hash = crypto.scryptSync(pw, salt, 64);
+      writeAtomic(initialFile, pw + '\n', 0o600);
+      writeAdmin({ password: { salt: salt.toString('base64'), hash: hash.toString('base64') }, setupDone: false });
+      return { password: pw };
+    }
+    let pw;
+    try { pw = fs.readFileSync(initialFile, 'utf8').trim(); } catch { return null; }
+    const ok = a.password && pw && crypto.timingSafeEqual(crypto.scryptSync(pw, Buffer.from(a.password.salt, 'base64'), 64), Buffer.from(a.password.hash, 'base64'));
+    if (ok) return { password: pw };
+    try { fs.unlinkSync(initialFile); } catch { /* déjà absent */ }
+    return null;
+  }
+
   function enabled() {
     const a = readAdmin();
     return config.supportAuth.password !== '' || Boolean(a.password) || a.state === 'bad';
@@ -227,7 +250,8 @@ function createAdmin({ config, settings, dataDir, send = defaultSend, serveStati
       writable: settings.writable,
       setupDone: admin.setupDone,
       fields: settings.describe(),
-      passwordFromEnv: !admin.password,
+      // Mot de passe de départ (SUPPORT_PASSWORD ou généré au premier démarrage) : l'admin est invité à le changer.
+      passwordFromEnv: !admin.password || fs.existsSync(initialFile),
     };
   }
 
@@ -297,6 +321,7 @@ function createAdmin({ config, settings, dataDir, send = defaultSend, serveStati
     const salt = crypto.randomBytes(16);
     const hash = await scrypt(next, salt, 64);
     writeAdmin({ password: { salt: salt.toString('base64'), hash: hash.toString('base64') }, setupDone: readAdmin().setupDone });
+    try { fs.unlinkSync(initialFile); } catch { /* pas de mot de passe généré */ }
     // Les autres sessions sont fermées ; celle qui a fait le changement reste ouverte.
     for (const k of [...sessions.keys()]) if (k !== session.key) sessions.delete(k);
     json(req, res, 200, { ok: true }, refresh);
@@ -409,7 +434,7 @@ function createAdmin({ config, settings, dataDir, send = defaultSend, serveStati
     return true;
   }
 
-  return { handle, enabled };
+  return { handle, enabled, firstRun };
 }
 
 module.exports = { createAdmin };

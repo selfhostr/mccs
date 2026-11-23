@@ -11,7 +11,7 @@ function httpUrl(v) {
     const u = new URL(v);
     if (u.protocol === 'https:' || u.protocol === 'http:') return u.origin + u.pathname.replace(/\/+$/, '');
   } catch { /* défaut ci-dessous */ }
-  return 'https://config.example.com';
+  return '';
 }
 
 // Remplace {email}, {local} et {domain} dans un gabarit d'URL DAV (même logique que app.js).
@@ -151,7 +151,7 @@ function build(src) {
     // Messages montrés au client selon le résultat du test (server/messages.js).
     testMessages: buildMessages(env),
     // Adresse publique du configurateur (liens et QR codes envoyés aux clients).
-    publicUrl: httpUrl(env('PUBLIC_URL', 'https://config.example.com')),
+    publicUrl: httpUrl(env('PUBLIC_URL', '')),
     // Page interne /support (désactivée si SUPPORT_PASSWORD est vide).
     supportAuth: {
       user: env('SUPPORT_USER', 'support'),

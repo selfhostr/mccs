@@ -630,7 +630,7 @@ function rebuildSettings() {
   if (!state.writable) banners.push(readonlyBanner());
   if (state.passwordFromEnv) {
     banners.push(callout('', INFO_ICON, 'Choisissez votre propre mot de passe',
-      h('p', {}, 'Vous vous connectez avec le mot de passe du fichier .env. Remplacez-le par un mot de passe propre à cet espace. ',
+      h('p', {}, 'Vous vous connectez avec le mot de passe de départ. Remplacez-le par un mot de passe à vous. ',
         h('button', { type: 'button', class: 'link-inline', text: 'Changer le mot de passe', onclick: openPassword }))));
   }
   root.replaceChildren(

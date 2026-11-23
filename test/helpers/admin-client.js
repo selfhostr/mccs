@@ -55,7 +55,7 @@ function startAdmin(env, extra = {}) {
   });
   return new Promise((resolve) => server.listen(0, '127.0.0.1', () => {
     const base = `http://127.0.0.1:${server.address().port}`;
-    resolve({ server, base, dir, settings, config, close: () => new Promise((r) => { server.closeAllConnections(); server.close(r); }) });
+    resolve({ server, base, dir, settings, config, admin, close: () => new Promise((r) => { server.closeAllConnections(); server.close(r); }) });
   }));
 }
 

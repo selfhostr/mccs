@@ -234,7 +234,20 @@ server.keepAliveTimeout = 65000;
 // Importé (tests, outils) : pas d'écoute automatique.
 module.exports = { server, settings };
 if (require.main === module) {
+  let initial = null;
+  try { initial = admin.firstRun(); } catch (err) { console.error(`Mot de passe de première connexion impossible à créer : ${err.message}`); }
   server.listen(config.port, '0.0.0.0', () => {
+    if (initial) {
+      console.log([
+        '',
+        '  Première connexion à mccs',
+        `  Ouvrez       http://<adresse-du-serveur>:${config.port}/support`,
+        `  Identifiant  ${config.supportAuth.user}`,
+        `  Mot de passe ${initial.password}`,
+        '  Changez-le ensuite (menu du compte > Changer le mot de passe) : ce message disparaîtra.',
+        '',
+      ].join('\n'));
+    }
     console.log(`mccs à l'écoute sur :${config.port} (${files.size} fichiers statiques, ${GUIDE_SHOTS.length} captures, page /support ${admin.enabled() ? 'active' : 'désactivée'}, réglages ${settings.writable ? 'dans ' + DATA_DIR : 'en lecture seule'})`);
   });
 }
