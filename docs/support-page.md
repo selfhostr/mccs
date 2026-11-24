@@ -26,7 +26,9 @@ At the calendar and contacts step, mccs looks for the CalDAV and CardDAV address
 - **Réglages**: every setting, grouped as in [Configuration](configuration.md). Each field shows where its value comes from (default, environment or saved here) and can go back to its default. "Annuler la dernière modification" restores the previous `config.json`.
 - **Liens clients**: type the customer's address (name, device and application are optional), then copy the link or download the QR code as PNG or SVG, and pass it on through the channel of your choice. mccs sends nothing itself. The link points to `PUBLIC_URL`, so set it first.
 
-Logo and background images can be uploaded: PNG, JPEG or WebP, 2 MB at most. They are stored in `/data/uploads/` and served from `/uploads/`. SVG is not accepted as an upload; an SVG logo can still be used by URL.
+The **Référencement** section of Réglages decides whether search engines may index the home page (off by default), and sets its title, description and link preview image, with a live Google result preview and link preview. Its "Copier le prompt pour une IA" button copies a prompt describing your setup to paste into a generative AI; paste the AI's answer back and "Remplir les champs" fills the fields for you to check and save. See [Configuration](configuration.md#search-engines-and-link-previews). The last step of the setup assistant points there.
+
+Logo, background and link preview images can be uploaded: PNG, JPEG or WebP, 2 MB at most. They are stored in `/data/uploads/` and served from `/uploads/`. SVG is not accepted as an upload; an SVG logo can still be used by URL.
 
 ## Password
 

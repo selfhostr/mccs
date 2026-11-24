@@ -9,6 +9,8 @@ export const DEFAULTS = {
   PUBLIC_URL: 'https://config.example.com', PROFILE_ID_PREFIX: 'com.example.mailsetup',
 };
 export const DEFAULT_ACCENT = '#1f5f8b';
+// Titre de la page d'accueil sans SEO_TITLE : « Configurer ma messagerie · <marque> » (server/seo.js).
+export const SEO_TITLE_PREFIX = 'Configurer ma messagerie';
 
 // Explications affichées sous chaque champ (le jargon est expliqué une fois, là où il apparaît).
 export const HELP = {
@@ -42,6 +44,10 @@ export const HELP = {
   CONNECTION_TEST: 'Sur la page d’accueil, le client saisit aussi son mot de passe : mccs se connecte à vos serveurs de réception puis d’envoi pour vérifier qu’il fonctionne, avant de le guider. Le mot de passe n’est ni enregistré ni journalisé.',
   CONNECTION_TEST_MAX_PER_EMAIL: 'Au-delà, la vérification est refusée pour cette adresse pendant 15 minutes. Gardez ce nombre plus bas que le seuil de blocage de votre serveur mail.',
   CONNECTION_TEST_MAX_PER_IP: 'Toutes adresses confondues, depuis un même appareil ou réseau. Derrière un proxy, l’adresse IP réelle n’est connue que si TRUSTED_PROXY_HEADER est réglé.',
+  SEO_INDEX: 'Désactivé (par défaut), la page demande aux moteurs de recherche de ne pas l’indexer : c’est le bon choix pour un outil interne. Activez-le si vos utilisateurs doivent trouver le configurateur dans Google ou Bing. L’administration n’est jamais indexée.',
+  SEO_TITLE: 'Le titre de l’onglet du navigateur et du lien bleu dans les résultats de recherche. Vide : « Configurer ma messagerie », suivi de votre nom.',
+  SEO_DESCRIPTION: 'Le court texte affiché sous le titre dans les résultats et dans les aperçus de partage. Une ou deux phrases, sans retour à la ligne.',
+  SEO_IMAGE: 'Montrée quand le lien est partagé dans une messagerie ou sur un réseau social. 1200 × 630 pixels conseillés ; PNG, JPEG ou WebP, 2 Mo au maximum. Vide : le logo de la marque, s’il n’est pas en SVG.',
   PROFILE_ID_PREFIX: 'Un identifiant technique, écrit comme un nom de domaine à l’envers (par exemple com.example.mail). Évitez de le changer : les appareils s’en servent pour reconnaître le profil.',
 };
 
@@ -68,6 +74,8 @@ const HEX = '#(?:[0-9a-f]{3}|[0-9a-f]{6})';
 const COLOR_RE = new RegExp('^' + HEX + '$', 'i');
 const BACKGROUND_RE = new RegExp('^(?:' + HEX + '(?:,' + HEX + ')?|/uploads/[a-z0-9-]+\\.(?:png|jpe?g|webp))$', 'i');
 const LOGO_PATH_RE = /^\/(?:img|uploads)\/[A-Za-z0-9._/-]+\.(?:svg|png|jpe?g|webp)$/;
+const SHARE_PATH_RE = /^\/(?:img|uploads)\/[A-Za-z0-9._/-]+\.(?:png|jpe?g|webp)$/i;
+const LINE_BAD_RE = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/;
 const EMAIL_RE = /^[A-Za-z0-9!#$%&'*+/=?^_`{|}~.-]{1,64}@[A-Za-z0-9.-]+\.[A-Za-z]{2,63}$/;
 // Téléphone, tous pays : + en tête facultatif, chiffres, espaces (y compris insécables), ( ) . / -,
 // puis un poste facultatif (« ext. 12 », « x 12 », « poste 12 », « #12 »). De 3 à 17 chiffres hors poste ;
@@ -104,16 +112,22 @@ const CHECKS = {
   toggle: (v, raw) => (raw === 'true' || raw === 'false' ? '' : 'Valeur attendue : true ou false.'),
   count: (v) => (/^\d{1,5}$/.test(v) && +v >= 1 && +v <= 10000 ? '' : 'Nombre entier entre 1 et 10000.'),
   message: (v, raw) => (/[\u0000-\u0008\u000b-\u001f\u007f-\u009f]/.test(raw) ? 'Caractère de contrôle refusé.' : ''),
+  line: (v, raw, f) => {
+    if (LINE_BAD_RE.test(raw)) return 'Une seule ligne, sans caractère de contrôle.';
+    const n = [...v].length;
+    return f && f.max && n > f.max ? `Trop long : ${n} caractères, ${f.max} au maximum.` : '';
+  },
+  'share-image': (v) => (SHARE_PATH_RE.test(v) || isHttpUrl(v) ? '' : 'Image invalide : une image PNG, JPEG ou WebP envoyée, ou une adresse https://.'),
   domains: (v) => {
     const bad = v.split(',').map((s) => s.trim()).filter((d) => d && !isHost(d));
     return bad.length ? `Domaine invalide : ${bad.join(', ')} (ex. example.com).` : '';
   },
 };
-export function check(type, value) {
+export function check(type, value, field) {
   const raw = String(value || '');
   const v = raw.trim();
   if (!v || v.length > 500) return v.length > 500 ? 'Valeur trop longue (500 caractères au maximum).' : '';
-  return CHECKS[type] ? CHECKS[type](v, raw) : '';
+  return CHECKS[type] ? CHECKS[type](v, raw, field) : '';
 }
 
 /* ---------- Valeurs déduites (même logique que server/config.js) ---------- */
@@ -164,6 +178,7 @@ export function resolver(entries) {
       case 'DAV_DISCOVERY_URL': return base() + '/.well-known/caldav';
       case 'DAV_CARD_DISCOVERY_URL': return base() + '/.well-known/carddav';
       case 'PROFILE_ORGANIZATION': return resolve('BRAND_NAME');
+      case 'SEO_TITLE': return SEO_TITLE_PREFIX + ' · ' + resolve('BRAND_NAME');
       default: {
         if (k in DEFAULTS) return DEFAULTS[k];
         if (PRESET_KEYS.includes(k)) return presetUrls(resolve('DAV_PRESET'), base(), resolve('DAV_DISCOVERY_URL'), resolve('DAV_CARD_DISCOVERY_URL'))[k];
@@ -308,9 +323,12 @@ function uploadButton(kind, ctx, onDone) {
   return { node: h('span', { class: 'upload' }, btn, file), btn };
 }
 
+// Logo, ou image de partage (SEO_IMAGE, kind « share ») : même éditeur, cadre au format 1,91:1.
 function logoEditor(field, id, emit, ctx) {
+  const share = field.type === 'share-image';
+  const none = share ? 'Aucune image' : 'Aucun logo';
   const img = h('img', { alt: '', hidden: true });
-  const empty = h('span', { class: 'logo-empty', text: 'Aucun logo' });
+  const empty = h('span', { class: 'logo-empty', text: none });
   const box = h('div', { class: 'logo-box' }, img, empty);
   const input = h('input', { id, type: 'text', inputmode: 'url', class: 'is-mono', maxlength: '500', autocomplete: 'off', autocapitalize: 'off', spellcheck: 'false', placeholder: 'https://… ou image envoyée' });
   let ph = '';
@@ -322,12 +340,12 @@ function logoEditor(field, id, emit, ctx) {
     img.hidden = !showable;
     if (showable) img.src = v; else img.removeAttribute('src');
     empty.hidden = Boolean(showable);
-    empty.textContent = v ? 'Aperçu après l’enregistrement' : 'Aucun logo';
+    empty.textContent = v ? 'Aperçu après l’enregistrement' : none;
   };
   img.addEventListener('error', () => { img.hidden = true; empty.hidden = false; empty.textContent = 'Image introuvable'; });
   input.addEventListener('input', () => { paint(); emit(); });
-  const up = uploadButton('logo', ctx, (p) => { input.value = p; paint(); emit(); });
-  const node = h('div', { class: 'logo-ed' }, box, h('div', { class: 'logo-side' }, up.node, h('span', { class: 'logo-or', text: 'ou indiquez l’adresse d’une image :' }), input));
+  const up = uploadButton(share ? 'share' : 'logo', ctx, (p) => { input.value = p; paint(); emit(); });
+  const node = h('div', { class: 'logo-ed' + (share ? ' is-share' : '') }, box, h('div', { class: 'logo-side' }, up.node, h('span', { class: 'logo-or', text: 'ou indiquez l’adresse d’une image :' }), input));
   return {
     node, input,
     get: () => input.value,
@@ -500,7 +518,61 @@ function messageEditor(field, id, emit) {
   };
 }
 
-const EDITORS = { toggle: toggleEditor, message: messageEditor, security: selectEditor, preset: selectEditor, color: colorEditor, logo: logoEditor, background: backgroundEditor, domains: domainsEditor };
+// Texte d'une ligne avec compteur (SEO_TITLE, SEO_DESCRIPTION) : field.max (refusé au-delà) et
+// field.advice [min, max] (zone conseillée, dessinée sur la jauge). Vide : la valeur par défaut, comptée.
+const LEN_TEXT = {
+  empty: (n, f) => `Par défaut : ${n} caractères (conseillé : ${f.advice[0]} à ${f.advice[1]})`,
+  short: (n, f) => `${n} caractères : un peu court (conseillé : ${f.advice[0]} à ${f.advice[1]})`,
+  ok: (n, f) => `${n} caractères (conseillé : ${f.advice[0]} à ${f.advice[1]})`,
+  long: (n, f) => `${n} caractères : risque d’être coupé (conseillé : ${f.advice[0]} à ${f.advice[1]})`,
+  over: (n, f) => `${n} caractères : trop long (${f.max} au maximum)`,
+};
+function lineEditor(field, id, emit) {
+  const multi = Boolean(field.multiline);
+  const input = multi
+    ? h('textarea', { id, rows: '3', class: 'line-input', maxlength: '500', autocomplete: 'off' })
+    : h('input', { id, type: 'text', maxlength: '500', autocomplete: 'off' });
+  // Une seule ligne : Entrée n'ajoute rien, un retour à la ligne collé devient une espace.
+  if (multi) input.addEventListener('keydown', (e) => { if (e.key === 'Enter') e.preventDefault(); });
+  const max = field.max || 500;
+  const [lo, hi] = field.advice || [0, max];
+  const zone = h('span', { class: 'len-zone' });
+  const fill = h('span', { class: 'len-fill' });
+  const meter = h('span', { class: 'len-meter', 'aria-hidden': 'true' }, zone, fill);
+  const text = h('span', { class: 'len-text' });
+  const counter = h('div', { class: 'len', id: id + '-len' }, meter, text);
+  const pct = (n) => Math.min(100, (n / max) * 100).toFixed(2) + '%';
+  meter.style.setProperty('--lo', pct(lo));
+  meter.style.setProperty('--hi', pct(hi));
+  let ph = '';
+  const paint = () => {
+    const v = input.value.trim();
+    const n = [...(v || ph.trim())].length;
+    const state = !v ? 'empty' : n > max ? 'over' : n < lo ? 'short' : n > hi ? 'long' : 'ok';
+    counter.dataset.state = state;
+    fill.style.setProperty('--n', pct(n));
+    text.textContent = LEN_TEXT[state](n, { max, advice: [lo, hi] });
+  };
+  input.addEventListener('input', () => {
+    if (multi && /[\r\n]/.test(input.value)) {
+      const at = input.selectionStart;
+      input.value = input.value.replace(/\r?\n/g, ' ');
+      input.setSelectionRange(at, at);
+    }
+    paint();
+    emit();
+  });
+  return {
+    node: h('div', { class: 'line-ed' }, input, counter), input,
+    describedBy: counter.id,
+    get: () => input.value,
+    set: (v) => { input.value = v; paint(); },
+    hint: (t) => { ph = t || ''; input.placeholder = ph; paint(); },
+    disable: (b) => { input.readOnly = b; },
+  };
+}
+
+const EDITORS = { line: lineEditor, 'share-image': logoEditor, toggle: toggleEditor, message: messageEditor, security: selectEditor, preset: selectEditor, color: colorEditor, logo: logoEditor, background: backgroundEditor, domains: domainsEditor };
 
 /* ---------- Contrôle complet : libellé, provenance, éditeur, aide, erreur ---------- */
 // opts : { meta: bool (provenance et « Revenir au défaut »), onChange(ctrl), onReset(ctrl), upload(kind, file) }
@@ -529,7 +601,7 @@ export function createControl(field, opts = {}) {
   const emit = () => { ctrl.setError(''); paintMeta(); if (opts.onChange) opts.onChange(ctrl); };
   const editor = (EDITORS[field.type] || textEditor)(field, id, emit, ctrl);
   if (editor.input) {
-    editor.input.setAttribute('aria-describedby', [helpEl && helpEl.id, errEl.id].filter(Boolean).join(' '));
+    editor.input.setAttribute('aria-describedby', [editor.describedBy, helpEl && helpEl.id, errEl.id].filter(Boolean).join(' '));
   }
 
   const labelEl = h(field.type === 'background' ? 'span' : 'label', { class: 'afield-label', id: id + '-label', for: field.type === 'background' ? undefined : id, text: field.label });
@@ -568,7 +640,7 @@ export function createControl(field, opts = {}) {
   // Valide la valeur saisie ; un domaine en cours de saisie est d'abord ajouté.
   ctrl.validate = () => {
     if (editor.flush && !editor.flush()) return false;
-    const msg = check(field.type, editor.get());
+    const msg = check(field.type, editor.get(), field);
     ctrl.setError(msg);
     return !msg;
   };

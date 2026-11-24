@@ -115,7 +115,7 @@ function download(blob, filename) {
 }
 const fileBase = () => 'qr-' + current.email.replace(/[^A-Za-z0-9._-]+/g, '_');
 
-async function copyText(text) {
+export async function copyText(text) {
   try {
     if (navigator.clipboard && window.isSecureContext) { await navigator.clipboard.writeText(text); return true; }
   } catch { /* repli */ }

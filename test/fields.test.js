@@ -73,3 +73,18 @@ test('check : interrupteur, nombre d’essais et message, mêmes règles que le 
   assert.equal(isOn('false'), false);
   assert.equal(isOn(''), false);
 });
+
+test('référencement : titre par défaut et validation, mêmes règles que le serveur', async () => {
+  const { resolver, check } = await load();
+  const { defaultTitle } = require('../server/seo');
+  const { FIELDS, validateValues } = require('../server/settings');
+  assert.equal(resolver(entries({ BRAND_NAME: 'Acme' })).resolve('SEO_TITLE'), defaultTitle('Acme'));
+  assert.equal(resolver(entries({})).resolve('SEO_TITLE'), defaultTitle('mccs'));
+  const title = FIELDS.find((f) => f.key === 'SEO_TITLE');
+  for (const v of ['Titre', 'x'.repeat(80), 'x'.repeat(81), 'a\nb', 'a\u0007b']) {
+    assert.equal(check('line', v, title) === '', !validateValues({ SEO_TITLE: v }).SEO_TITLE, JSON.stringify(v));
+  }
+  for (const v of ['/uploads/share-0123456789abcdef.png', 'https://cdn.acme.example/og.jpg', '/img/logo.svg', 'javascript:x']) {
+    assert.equal(check('share-image', v) === '', !validateValues({ SEO_IMAGE: v }).SEO_IMAGE, v);
+  }
+});

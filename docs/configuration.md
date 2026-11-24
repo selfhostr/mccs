@@ -38,6 +38,10 @@ The compose file mounts the `mccs-data` volume on `/data`. Without a writable `/
 | `DAV_DISCOVERY_URL`, `DAV_CARD_DISCOVERY_URL` | `DAV_BASE_URL/.well-known/caldav` and `/carddav` | Calendar and contacts discovery URLs, filled by the automatic detection. With `generic`, every calendar and contacts URL follows them |
 | `DAV_PRINCIPAL_URL_TEMPLATE`, `DAV_CALENDAR_URL_TEMPLATE`, `DAV_TASKS_URL_TEMPLATE`, `DAV_CONTACTS_URL_TEMPLATE` | per server type | Personal URL templates (`{email}`, `{local}`, `{domain}`) |
 | `PUBLIC_URL` | empty | Public address of this app (links, QR codes); empty = the address used by the browser |
+| `SEO_INDEX` | `false` | Let search engines index the home page (`robots` meta, `/robots.txt`, `/sitemap.xml`). Also accepts `1`, `on`, `yes` in the environment |
+| `SEO_TITLE` | `Configurer ma messagerie · BRAND_NAME` | Title of the home page (tab, search results, link previews), one line, 80 characters at most |
+| `SEO_DESCRIPTION` | French text | Meta description of the home page, one line, 200 characters at most |
+| `SEO_IMAGE` | empty | Link preview image: uploaded in the admin (`/uploads/share-<id>.png`), `/img/...` path or http(s) URL; PNG, JPEG or WebP. Empty = the brand logo unless it is an SVG |
 | `SUPPORT_PHONE`, `SUPPORT_EMAIL`, `SUPPORT_HOURS`, `SUPPORT_ADDRESS` | empty | Support contact; each hidden when empty |
 | `SUPPORT_USER` | `support` | Admin user for `/support` |
 | `SUPPORT_PASSWORD` | empty | Optional admin password. Empty = one is generated on first start and printed in the logs; once changed in the admin, `/data/admin.json` wins |
@@ -108,6 +112,19 @@ When nothing is found, type the two addresses under "Avancé". The server type t
 - `SUPPORT_USER` (`support`) and `SUPPORT_PASSWORD`: sign-in for `/support`. The password can then be changed in the admin; it is stored hashed in `/data/admin.json`, and deleting that file generates a new password at the next start (or brings `SUPPORT_PASSWORD` back if set). Without `SUPPORT_PASSWORD`, a password is generated on first start and printed in the logs. Only a non-writable `/data` without `SUPPORT_PASSWORD` disables the page (404).
 - `PROFILE_ORGANIZATION` (defaults to `BRAND_NAME`) and `PROFILE_ID_PREFIX` (`com.example.mailsetup`).
 - Download links: `CALDAVSYNC_URL`, `DAVX5_GITHUB_URL`, `DAVX5_FDROID_URL`, `DAVX5_PLAY_URL`, `THUNDERBIRD_URL`.
+
+## Search engines and link previews
+
+By default the home page asks search engines not to index it (`noindex, nofollow`) and `/robots.txt` disallows everything: mccs is usually an internal tool. Settings > "Référencement" changes that and sets what search results and link previews show.
+
+The server renders the head of `/` from the settings, again after every save: `<title>`, meta description, `robots`, `<link rel="canonical">`, Open Graph (`og:type`, `og:site_name` = `BRAND_NAME`, `og:locale` `fr_FR`, `og:title`, `og:description`, `og:url`, `og:image`), `twitter:card` and a JSON-LD block (`WebSite` and `Organization`, with the logo and a `ContactPoint` from `SUPPORT_PHONE` and `SUPPORT_EMAIL` when set). Every value is escaped; the JSON-LD is a data block (`application/ld+json`), not run, so the CSP stays `script-src 'self'`.
+
+- `SEO_INDEX=true`: `robots` becomes `index, follow` and `/robots.txt` allows `/` but not `/support`. With `PUBLIC_URL` set it also links `/sitemap.xml`, which lists the home page only (guides are `#/guide/...` fragments of that page). Otherwise `/sitemap.xml` answers 404.
+- `PUBLIC_URL` is needed for the canonical URL, `og:url`, the sitemap and an absolute `og:image` for local images. Without it these are left out. If mccs is served under a path (`https://example.com/mail`), `/robots.txt` is only read by crawlers at the root of the host: put the rules in the root site instead.
+- `SEO_IMAGE` gives a large preview card (`summary_large_image`, 1200 × 630 px recommended). Without it the brand logo is used as a small card (`summary`), unless it is an SVG, which social networks do not show.
+- `/support` always sends `X-Robots-Tag: noindex, nofollow`, whatever `SEO_INDEX` says.
+
+In the admin, the section shows a Google result preview and a link preview that follow the fields as you type, and character counters (title 30 to 60, description 120 to 160 recommended). "Copier le prompt pour une IA" copies a French prompt built from the current settings (brand, public address, accepted domains, mail server, services, devices, support contact, current SEO values) for the generative AI of your choice; it asks a few questions first if needed, then answers with a JSON block. Paste the answer and "Remplir les champs" fills the title, description and indexing switch from the first JSON block, without saving, and lists what could not be read.
 
 ## Example: MDaemon
 

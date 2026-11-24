@@ -242,6 +242,17 @@ test('envoi : PNG, JPEG et WebP acceptés, puis servis depuis /uploads', async (
   }
 });
 
+test('envoi : image de partage (kind=share), utilisable comme SEO_IMAGE', async () => {
+  const r = await c.call('POST', '/support/api/upload?kind=share', { cookie, body: PNG, headers: { 'Content-Type': 'image/png' } });
+  assert.equal(r.status, 200);
+  const { path: p } = await r.json();
+  assert.match(p, /^\/uploads\/share-[0-9a-f]{16}\.png$/);
+  assert.equal((await c.call('GET', p)).status, 200);
+  const s = await c.call('PUT', '/support/api/settings', { cookie, json: { values: { SEO_IMAGE: p } } });
+  assert.equal(s.status, 200);
+  await c.call('PUT', '/support/api/settings', { cookie, json: { values: { SEO_IMAGE: '' } } });
+});
+
 test('envoi : faux PNG (GIF) 415, type refusé 415, type inconnu 400, plus de 2 Mo 413', async () => {
   let r = await c.call('POST', '/support/api/upload?kind=logo', { cookie, body: GIF, headers: { 'Content-Type': 'image/png' } });
   assert.equal(r.status, 415);

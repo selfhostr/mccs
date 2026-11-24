@@ -4,6 +4,11 @@ All notable changes to mccs. The format follows [Keep a Changelog](https://keepa
 
 ## Unreleased
 
+### Added
+
+- Search engines and link previews (Settings > "Référencement"): `SEO_INDEX` (off by default, the page stays `noindex`), `SEO_TITLE`, `SEO_DESCRIPTION` and `SEO_IMAGE` (uploaded, falls back to a PNG, JPEG or WebP brand logo). The server renders the head of the home page from them (title, description, `robots`, canonical URL, Open Graph, Twitter card, JSON-LD `WebSite` and `Organization` with the support contact) and serves `/robots.txt` and, when indexing is on and `PUBLIC_URL` is set, `/sitemap.xml`. `/support` stays `noindex`.
+- The admin shows a live Google result preview and link preview with character counters, and can copy a prompt for a generative AI built from the current settings, then fill the fields from the JSON block of its answer (nothing is saved until "Enregistrer").
+
 ## [1.0.1] - 2026-11-24
 
 ### Fixed
