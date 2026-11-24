@@ -2,6 +2,16 @@
 
 All notable changes to mccs. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
+## [Unreleased]
+
+### Added
+
+- Static demo: `node tools/build-demo.js` (or `npm run demo`) builds a copy of the customer page and of `/support` that needs no server, under a path prefix (`/demo/` by default, output in `dist/demo`). A fictional brand (Acme Mail, `example.com`), a "Démo" banner, and a fake back end in the browser built from the real settings, validation, SEO and Apple profile modules: settings and uploaded images stay in `localStorage`, server tests and CalDAV detection are simulated, nothing is sent. See [docs/development.md](docs/development.md#static-demo).
+
+### Changed
+
+- The generated brand stylesheet (`/brand.css`) moved to `server/brand.js`, so the demo uses the same code. No change in behaviour.
+
 ## [1.1.0] - 2026-11-24
 
 ### Added

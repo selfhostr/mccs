@@ -12,6 +12,7 @@ const { buildAutoconfig } = require('./autoconfig');
 const { createAdmin } = require('./admin');
 const { createConnectionTest } = require('./connection-test');
 const { renderHead, injectHead, robotsTxt, sitemapXml } = require('./seo');
+const { brandCss } = require('./brand');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
@@ -101,18 +102,6 @@ const GUIDE_SHOTS = [...files.keys()]
   .filter((u) => u.startsWith('/img/guides/') && /\.(png|jpe?g|webp)$/i.test(u))
   .map((u) => u.slice('/img/guides/'.length))
   .sort();
-// Feuille de marque générée (accent, fond de page) : fichier séparé plutôt qu'un style inline,
-// pour respecter la CSP (style-src 'self').
-function brandCss() {
-  const rules = [];
-  if (config.brandAccent) rules.push(`--accent: ${config.brandAccent};`, '--accent-on: #ffffff;');
-  const bg = config.brandBackground;
-  if (/^#[0-9a-f]+,#[0-9a-f]+$/i.test(bg)) { const [a, b] = bg.split(','); rules.push(`--brand-bg: linear-gradient(160deg, ${a}, ${b});`); }
-  else if (bg.startsWith('#')) rules.push(`--brand-bg: ${bg};`);
-  else if (bg.startsWith('/uploads/')) rules.push(`--brand-bg: center / cover no-repeat url("${bg}"), var(--bg);`);
-  return `:root { ${rules.join(' ')} }\n`;
-}
-
 // Page d'accueil telle que chargée (assets versionnés), avant l'insertion du <head> de référencement.
 const INDEX_TEMPLATE = files.get('/index.html').body.toString('utf8');
 // Pages qui chargent /brand.css : leur lien porte un hash du contenu (?v=…), recalculé à chaque
@@ -131,7 +120,7 @@ const live = (text, ext) => {
 function refresh() {
   SECURITY_HEADERS['Content-Security-Policy'] = buildCsp();
   configJson = Buffer.from(JSON.stringify(Object.assign(publicConfig(), { shots: GUIDE_SHOTS })));
-  const css = brandCss();
+  const css = brandCss(config);
   files.set('/brand.css', live(css, '.css'));
   const href = 'href="/brand.css?v=' + crypto.createHash('sha256').update(css).digest('hex').slice(0, 10) + '"';
   for (const [u, html] of BRAND_PAGES) {

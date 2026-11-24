@@ -1,0 +1,20 @@
+{
+  "comment": "Fictional brand of the static demo (tools/build-demo.js). settings: values as if saved in /support (config.json). env: variables of the fake container.",
+  "env": {},
+  "settings": {
+    "BRAND_NAME": "Acme Mail",
+    "BRAND_ACCENT": "#0f766e",
+    "MAIL_HOST": "mail.example.com",
+    "WEBMAIL_URL": "https://webmail.example.com/",
+    "ALLOWED_DOMAINS": "example.com",
+    "SUPPORT_PHONE": "+1 555 010 0100",
+    "SUPPORT_EMAIL": "support@example.com",
+    "SUPPORT_HOURS": "Du lundi au vendredi, de 8 h à 18 h",
+    "PROFILE_ID_PREFIX": "com.example.mail"
+  },
+  "admin": {
+    "user": "support",
+    "password": "demo",
+    "setupDone": false
+  }
+}
