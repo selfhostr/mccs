@@ -118,6 +118,9 @@ const DEFAULT_CFG = {
   connectionTest: false,
   testMessages: { imap: {}, smtp: {} },
 };
+// Titre de l'accueil rendu par le serveur (réglage SEO_TITLE) : repris tel quel au retour à l'accueil.
+const HOME_TITLE = document.title;
+
 const state = {
   cfg: DEFAULT_CFG,
   email: '',
@@ -278,7 +281,7 @@ function renderHome() {
   showForm();
   if (state.email) $('#email').value = state.email;
   if (state.name) $('#name').value = state.name;
-  document.title = 'Configurer ma messagerie · ' + state.cfg.brand;
+  document.title = HOME_TITLE;
 }
 
 /* ---------- Vérification du mot de passe (option CONNECTION_TEST) ----------
