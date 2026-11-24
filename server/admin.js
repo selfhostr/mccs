@@ -28,7 +28,8 @@ const ADMIN_VERSION = 1;
 const PUBLIC_FILES = new Set(['/support/login.html', '/support/login.js', '/support/support.css']);
 const LOGIN_PAGE = '/support/login.html';
 const TOKEN_RE = /^[A-Za-z0-9_-]{43}$/;
-const UPLOAD_NAME_RE = /^(logo|background)-[0-9a-f]{16}\.(png|jpg|webp)$/;
+const UPLOAD_KINDS = ['logo', 'background', 'share']; // share : image de partage (SEO_IMAGE)
+const UPLOAD_NAME_RE = /^(logo|background|share)-[0-9a-f]{16}\.(png|jpg|webp)$/;
 
 // Formats acceptés à l'envoi : type déclaré, extension et octets magiques (le SVG est refusé).
 const IMAGES = {
@@ -257,7 +258,7 @@ function createAdmin({ config, settings, dataDir, send = defaultSend, serveStati
 
   async function upload(req, res, url, refresh) {
     const kind = url.searchParams.get('kind');
-    if (kind !== 'logo' && kind !== 'background') return json(req, res, 400, { ok: false, error: 'kind' }, refresh);
+    if (!UPLOAD_KINDS.includes(kind)) return json(req, res, 400, { ok: false, error: 'kind' }, refresh);
     const type = String(req.headers['content-type'] || '').split(';')[0].trim().toLowerCase();
     const fmt = Object.prototype.hasOwnProperty.call(IMAGES, type) ? IMAGES[type] : null;
     if (!fmt) return json(req, res, 415, { ok: false, error: 'type' }, refresh);

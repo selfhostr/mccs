@@ -4,6 +4,7 @@
 // Chaque clé porte le nom de la variable d'environnement correspondante.
 const { normalizeEmail } = require('./validate');
 const { messageFields } = require('./messages');
+const { DEFAULT_DESCRIPTION } = require('./seo');
 
 const SECURITY = ['SSL/TLS', 'STARTTLS'];
 const PRESETS = ['mdaemon', 'generic'];
@@ -48,6 +49,11 @@ const FIELDS = [
   { key: 'SUPPORT_EMAIL', group: 'support', label: 'E-mail', type: 'email' },
   { key: 'SUPPORT_HOURS', group: 'support', label: 'Horaires', type: 'text' },
   { key: 'SUPPORT_ADDRESS', group: 'support', label: 'Adresse', type: 'text' },
+  // Référencement de la page d'accueil (server/seo.js). advice : longueur conseillée, en caractères.
+  { key: 'SEO_INDEX', group: 'seo', label: 'Autoriser les moteurs de recherche', type: 'toggle', default: 'false' },
+  { key: 'SEO_TITLE', group: 'seo', label: 'Titre de la page', type: 'line', max: 80, advice: [30, 60] },
+  { key: 'SEO_DESCRIPTION', group: 'seo', label: 'Description', type: 'line', max: 200, advice: [120, 160], multiline: true, default: DEFAULT_DESCRIPTION },
+  { key: 'SEO_IMAGE', group: 'seo', label: 'Image de partage', type: 'share-image' },
   // Profil Apple
   { key: 'PROFILE_ORGANIZATION', group: 'profile', label: 'Organisation', type: 'text' },
   { key: 'PROFILE_ID_PREFIX', group: 'profile', label: 'Préfixe d’identifiant', type: 'reverse-dns' },
@@ -65,6 +71,10 @@ const HEX = '#(?:[0-9a-f]{3}|[0-9a-f]{6})';
 const COLOR_RE = new RegExp('^' + HEX + '$', 'i');
 const BACKGROUND_RE = new RegExp('^(?:' + HEX + '(?:,' + HEX + ')?|/uploads/[a-z0-9-]+\\.(?:png|jpe?g|webp))$', 'i');
 const LOGO_PATH_RE = /^\/(?:img|uploads)\/[A-Za-z0-9._/-]+\.(?:svg|png|jpe?g|webp)$/;
+// Image de partage : pas de SVG (les réseaux sociaux ne l'affichent pas).
+const SHARE_PATH_RE = /^\/(?:img|uploads)\/[A-Za-z0-9._/-]+\.(?:png|jpe?g|webp)$/i;
+// Texte d'une ligne : aucun caractère de contrôle (retours à la ligne compris) ni séparateur de ligne Unicode.
+const LINE_BAD_RE = /[\u0000-\u001f\u007f-\u009f\u2028\u2029]/;
 
 // Téléphone, tous pays : + en tête facultatif, chiffres, espaces (y compris insécables), ( ) . / -,
 // puis un poste facultatif (« ext. 12 », « x 12 », « poste 12 », « #12 »). De 3 à 17 chiffres hors poste ;
@@ -114,6 +124,12 @@ const CHECKS = {
   phone: (v, raw) => (isPhone(raw) ? '' : 'Numéro de téléphone invalide : des chiffres, avec + et l’indicatif du pays si besoin (ex. +1 555 010 0100, poste « ext. 12 »).'),
   // Liste « example.com, example.org » ; vide = tous les domaines.
   domains: (v) => (v.split(',').every((d) => isHost(d.trim())) ? '' : 'Liste invalide : des domaines séparés par des virgules (ex. example.com, example.org).'),
+  line: (v, raw, f) => {
+    if (LINE_BAD_RE.test(raw)) return 'Une seule ligne, sans caractère de contrôle.';
+    const n = [...v].length;
+    return n > f.max ? `Trop long : ${n} caractères, ${f.max} au maximum.` : '';
+  },
+  'share-image': (v) => (SHARE_PATH_RE.test(v) || isHttpUrl(v) ? '' : 'Image invalide : une image PNG, JPEG ou WebP envoyée, ou une adresse https://.'),
   'reverse-dns': (v) => (/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(v) ? '' : 'Format attendu : com.example.mailsetup.'),
 };
 
@@ -130,7 +146,7 @@ function validateValues(values) {
     if (raw.length > MAX_LEN) { errors[key] = `Valeur trop longue (${MAX_LEN} caractères au maximum).`; continue; }
     const v = raw.trim();
     if (v === '') continue;
-    const msg = CHECKS[field.type](v, raw);
+    const msg = CHECKS[field.type](v, raw, field);
     if (msg) errors[key] = msg;
   }
   return Object.fromEntries(Object.entries(errors));

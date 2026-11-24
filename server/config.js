@@ -5,6 +5,7 @@
 const { FIELDS, validateValues, PHONE_EXT_RE } = require('./settings');
 const { createStore } = require('./store');
 const { buildMessages, effectiveMessage } = require('./messages');
+const { defaultTitle, DEFAULT_DESCRIPTION } = require('./seo');
 
 function httpUrl(v) {
   try {
@@ -51,6 +52,11 @@ function logoUrl(v) {
 // Fond de page (BRAND_BACKGROUND) : déjà validé par settings.js, ignoré sinon.
 function background(v) {
   return validateValues({ BRAND_BACKGROUND: v }).BRAND_BACKGROUND ? '' : v.trim();
+}
+
+// Image de partage (SEO_IMAGE) : déjà validée par settings.js, ignorée sinon.
+function shareImage(v) {
+  return v && !validateValues({ SEO_IMAGE: v }).SEO_IMAGE ? v.trim() : '';
 }
 
 // Calcule la configuration effective à partir d'une source clé → valeur (env + réglages).
@@ -164,6 +170,13 @@ function build(src) {
       hours: env('SUPPORT_HOURS', ''),
       address: env('SUPPORT_ADDRESS', ''),
     },
+    // Référencement de la page d'accueil (server/seo.js) : non indexée par défaut (outil interne).
+    seo: {
+      index: bool('SEO_INDEX'),
+      title: env('SEO_TITLE', defaultTitle(BRAND)),
+      description: env('SEO_DESCRIPTION', DEFAULT_DESCRIPTION),
+      image: shareImage(env('SEO_IMAGE', '')),
+    },
     profile: {
       org: env('PROFILE_ORGANIZATION', BRAND),
       idPrefix: env('PROFILE_ID_PREFIX', 'com.example.mailsetup'),
@@ -195,6 +208,8 @@ const EFFECTIVE = {
   CONNECTION_TEST: (c) => String(c.connectionTest),
   CONNECTION_TEST_MAX_PER_EMAIL: (c) => String(c.connectionTestLimits.perEmail),
   CONNECTION_TEST_MAX_PER_IP: (c) => String(c.connectionTestLimits.perIp),
+  SEO_INDEX: (c) => String(c.seo.index), SEO_TITLE: (c) => c.seo.title,
+  SEO_DESCRIPTION: (c) => c.seo.description, SEO_IMAGE: (c) => c.seo.image,
 };
 for (const f of FIELDS) if (f.type === 'message') EFFECTIVE[f.key] = (c) => effectiveMessage(c.testMessages, f);
 

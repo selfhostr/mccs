@@ -11,6 +11,7 @@ const { buildProfile, parseServices } = require('./mobileconfig');
 const { buildAutoconfig } = require('./autoconfig');
 const { createAdmin } = require('./admin');
 const { createConnectionTest } = require('./connection-test');
+const { renderHead, injectHead, robotsTxt, sitemapXml } = require('./seo');
 
 const PUBLIC_DIR = path.join(__dirname, '..', 'public');
 
@@ -31,13 +32,14 @@ const TYPES = {
 };
 
 // CSP : recalculée à chaque changement de réglages (logo externe : seule son origine est ajoutée à img-src).
+// L'image de partage externe (SEO_IMAGE) n'est affichée que dans l'aperçu de l'admin.
 function buildCsp() {
-  const logoOrigin = /^https?:\/\//.test(config.brandLogoUrl) ? ' ' + new URL(config.brandLogoUrl).origin : '';
+  const origins = [...new Set([config.brandLogoUrl, config.seo.image].filter((u) => /^https?:\/\//.test(u)).map((u) => new URL(u).origin))];
   return [
     "default-src 'none'",
     "script-src 'self'",
     "style-src 'self'",
-    "img-src 'self' data:" + logoOrigin,
+    "img-src 'self' data:" + origins.map((o) => ' ' + o).join(''),
     "font-src 'self'",
     "connect-src 'self'",
     "manifest-src 'self'",
@@ -111,13 +113,25 @@ function brandCss() {
   return `:root { ${rules.join(' ')} }\n`;
 }
 
+// Page d'accueil telle que chargée (assets versionnés), avant l'insertion du <head> de référencement.
+const INDEX_TEMPLATE = files.get('/index.html').body.toString('utf8');
+
 // Tout ce qui dépend des réglages, recalculé au démarrage et après chaque enregistrement.
 let configJson;
+let robots;
+let sitemap;
+const live = (text, ext) => {
+  const body = Buffer.from(text);
+  return { body, gz: zlib.gzipSync(body, { level: 9 }), type: TYPES[ext], ext, live: true };
+};
 function refresh() {
   SECURITY_HEADERS['Content-Security-Policy'] = buildCsp();
   configJson = Buffer.from(JSON.stringify(Object.assign(publicConfig(), { shots: GUIDE_SHOTS })));
-  const body = Buffer.from(brandCss());
-  files.set('/brand.css', { body, gz: zlib.gzipSync(body, { level: 9 }), type: TYPES['.css'], ext: '.css', live: true });
+  files.set('/brand.css', live(brandCss(), '.css'));
+  files.set('/index.html', live(injectHead(INDEX_TEMPLATE, renderHead(config)), '.html'));
+  robots = Buffer.from(robotsTxt(config));
+  const xml = sitemapXml(config);
+  sitemap = xml === null ? null : Buffer.from(xml);
 }
 refresh();
 settings.onChange(refresh);
@@ -217,6 +231,13 @@ const server = http.createServer((req, res) => {
     if (p === '/healthz') return sendText(req, res, 200, 'ok');
     if (p === '/api/config') {
       return send(req, res, 200, configJson, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' });
+    }
+    if (p === '/robots.txt') {
+      return send(req, res, 200, robots, { 'Content-Type': 'text/plain; charset=utf-8', 'Cache-Control': 'no-cache' });
+    }
+    if (p === '/sitemap.xml') {
+      if (!sitemap) return notFound(req, res);
+      return send(req, res, 200, sitemap, { 'Content-Type': 'application/xml; charset=utf-8', 'Cache-Control': 'no-cache' });
     }
     if (p === '/profile.mobileconfig') return handleProfile(req, res, url.searchParams);
     if (p === '/mail/config-v1.1.xml' || p === '/.well-known/autoconfig/mail/config-v1.1.xml') {
