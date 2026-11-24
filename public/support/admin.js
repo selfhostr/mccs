@@ -1,7 +1,8 @@
 // Espace d'administration /support : assistant d'installation, réglages, liens clients et compte.
 // Contrat d'API : docs/superpowers/plans/2026-11-21-pr3-espace-admin.md (routes /support/api/*).
 import { createControl, resolver, exampleEmail, davUrl, backgroundCss, optionLabel, isHost, isOn, presetFor, DEFAULTS, h, ICONS } from '/support/fields.js';
-import { initLinks, reloadConfig, toast } from '/support/support.js';
+import { initLinks, reloadConfig, toast, copyText } from '/support/support.js';
+import { buildPrompt, parseAiAnswer, truncate } from '/support/seo.js';
 
 const $ = (s, root = document) => root.querySelector(s);
 let state = null; // { brand, writable, setupDone, fields, passwordFromEnv }
@@ -212,6 +213,177 @@ function davPreview() {
       : 'Serveur MDaemon : ce sont les adresses que le guide indiquera à ce client, calculées à partir de son adresse e-mail.';
   }
   return { node, update };
+}
+
+/* ---------- Référencement : aperçus Google et partage, prompt pour une IA ---------- */
+const SPARK_ICON = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7z"/></svg>';
+const COPY_ICON = '<svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="12" height="12" rx="2"/><path d="M5 15H4a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v1"/></svg>';
+const isLocalImage = (v) => /^\/(?:img|uploads)\//.test(v);
+
+// Adresse publique saisie, ou celle du .env ; vide = l'adresse du navigateur (comme server/config.js).
+function publicUrlOf(ctrls) {
+  const c = ctrls.get('PUBLIC_URL');
+  const v = c ? c.value.trim() || c.field.envValue || '' : '';
+  try { const u = new URL(v); return u.origin + u.pathname.replace(/\/+$/, ''); } catch { return ''; }
+}
+
+// Image envoyée aux réseaux sociaux : SEO_IMAGE, sinon le logo s'il n'est pas en SVG (comme server/seo.js).
+function shareImageOf(resolve) {
+  const img = resolve('SEO_IMAGE');
+  if (img) return { src: img, large: true, from: 'image' };
+  const logo = resolve('BRAND_LOGO_URL');
+  if (logo && !/\.svg(?:[?#]|$)/i.test(logo)) return { src: logo, large: false, from: 'logo' };
+  return { src: '', large: false, from: '' };
+}
+
+function seoPreview(ctrls) {
+  // Résultat Google
+  const favImg = h('img', { alt: '', hidden: true });
+  const favMark = h('span', { class: 'serp-mark', html: MAIL_ICON });
+  const siteName = h('span', { class: 'serp-name' });
+  const siteUrl = h('span', { class: 'serp-url' });
+  const title = h('span', { class: 'serp-title' });
+  const desc = h('p', { class: 'serp-desc' });
+  const off = h('p', { class: 'serp-off' });
+  const serp = h('div', { class: 'serp' },
+    h('div', { class: 'serp-site' }, h('span', { class: 'serp-fav' }, favImg, favMark), h('span', { class: 'serp-who' }, siteName, siteUrl)),
+    title, desc);
+  // Carte de partage
+  const shot = h('img', { alt: '' });
+  const media = h('div', { class: 'share-media' }, shot);
+  const host = h('span', { class: 'share-host' });
+  const sTitle = h('strong', { class: 'share-title' });
+  const sDesc = h('span', { class: 'share-desc' });
+  const card = h('div', { class: 'share' }, media, h('div', { class: 'share-body' }, host, sTitle, sDesc));
+  const note = h('p', { class: 'pv-note' });
+  const warn = h('p', { class: 'set-note seo-warn', hidden: true },
+    h('span', { text: 'Adresse publique non renseignée : l’adresse canonique, le plan du site et l’image de partage ne sont pas envoyés. ' }),
+    h('a', { class: 'link-inline', href: '#sec-public', text: 'Renseigner l’adresse publique', onclick: (e) => { e.preventDefault(); $('#sec-public').scrollIntoView({ behavior: 'smooth', block: 'start' }); } }));
+
+  const node = h('div', { class: 'seo-pv' },
+    h('figure', { class: 'pv' },
+      h('figcaption', { class: 'pv-cap' }, h('span', { text: 'Aperçu dans Google' }), h('span', { class: 'pv-live', text: 'en direct' })),
+      serp, off),
+    h('figure', { class: 'pv' },
+      h('figcaption', { class: 'pv-cap' }, h('span', { text: 'Aperçu d’un lien partagé' })),
+      card, note),
+    warn);
+
+  function update(resolve, saved) {
+    const pub = publicUrlOf(ctrls);
+    const url = new URL((pub || location.origin) + '/');
+    const brand = resolve('BRAND_NAME') || 'mccs';
+    const t = resolve('SEO_TITLE');
+    const d = resolve('SEO_DESCRIPTION');
+    const indexed = isOn(resolve('SEO_INDEX'));
+    // Google : nom du site, adresse en fil d'Ariane, titre et description coupés au dernier mot entier.
+    siteName.textContent = brand;
+    const path = url.pathname.replace(/^\/|\/$/g, '');
+    siteUrl.textContent = url.origin + (path ? ' › ' + path.split('/').join(' › ') : '');
+    title.textContent = truncate(t, 60);
+    desc.textContent = truncate(d, 158);
+    const logo = resolve('BRAND_LOGO_URL');
+    const showFav = Boolean(logo) && (isLocalImage(logo) || logo === saved.BRAND_LOGO_URL);
+    favImg.hidden = !showFav;
+    favMark.hidden = showFav;
+    if (showFav) { if (favImg.getAttribute('src') !== logo) favImg.src = logo; } else favImg.removeAttribute('src');
+    serp.classList.toggle('is-off', !indexed);
+    off.hidden = indexed;
+    off.textContent = 'Indexation désactivée : la page n’apparaîtra pas dans les résultats de recherche.';
+
+    // Partage : grande image (SEO_IMAGE), vignette (logo) ou texte seul.
+    const img = shareImageOf(resolve);
+    const showable = Boolean(img.src) && (isLocalImage(img.src) || img.src === saved.SEO_IMAGE || img.src === saved.BRAND_LOGO_URL);
+    card.classList.toggle('is-large', showable && img.large);
+    card.classList.toggle('is-thumb', showable && !img.large);
+    media.hidden = !showable;
+    if (showable) { if (shot.getAttribute('src') !== img.src) shot.src = img.src; } else shot.removeAttribute('src');
+    host.textContent = url.host;
+    sTitle.textContent = truncate(t, 70);
+    sDesc.textContent = truncate(d, 120);
+    note.textContent = img.from === 'image'
+      ? (showable ? 'Aperçu indicatif : chaque application présente le lien à sa façon.' : 'L’image externe s’affichera ici après l’enregistrement.')
+      : img.from === 'logo' ? 'Sans image de partage, le logo de la marque est montré en vignette.'
+        : 'Sans image de partage ni logo PNG, JPEG ou WebP, le lien est montré sans image.';
+    warn.hidden = Boolean(pub);
+  }
+  return { node, update };
+}
+
+// Bloc « Rédiger avec une IA » : copie d'un prompt construit depuis la configuration, puis lecture de la réponse.
+function seoAssistant(ctrls, getResolver, onFilled) {
+  const promptText = () => {
+    const r = getResolver().resolve;
+    return buildPrompt({
+      brand: r('BRAND_NAME'), organization: r('PROFILE_ORGANIZATION'), publicUrl: publicUrlOf(ctrls),
+      domains: r('ALLOWED_DOMAINS').split(',').map((d) => d.trim()).filter(Boolean),
+      mailHost: r('MAIL_HOST'), webmailUrl: r('WEBMAIL_URL'),
+      support: { phone: r('SUPPORT_PHONE'), email: r('SUPPORT_EMAIL'), hours: r('SUPPORT_HOURS') },
+      seo: { title: r('SEO_TITLE'), description: r('SEO_DESCRIPTION'), index: isOn(r('SEO_INDEX')) },
+    });
+  };
+  const pre = h('pre', { class: 'ai-prompt', tabindex: '0' });
+  const show = h('details', { class: 'ai-show' }, h('summary', { text: 'Lire le prompt' }), pre);
+  show.addEventListener('toggle', () => { if (show.open) pre.textContent = promptText(); });
+  const copy = h('button', { type: 'button', class: 'btn btn-primary btn-sm', html: COPY_ICON + '<span>Copier le prompt pour une IA</span>' });
+  copy.addEventListener('click', async () => {
+    const text = promptText();
+    pre.textContent = text;
+    if (await copyText(text)) toast('Prompt copié. Collez-le dans l’IA de votre choix.');
+    else { show.open = true; toast('Copie impossible : sélectionnez le prompt ci-dessous.'); }
+  });
+
+  const answerId = 'ai-answer';
+  const answer = h('textarea', { id: answerId, class: 'ai-answer', rows: '5', spellcheck: 'false', placeholder: 'Collez ici la réponse complète, avec le bloc ```json.' });
+  const fill = h('button', { type: 'button', class: 'btn btn-ghost btn-sm', text: 'Remplir les champs' });
+  const result = h('div', { class: 'probe-result ai-result', 'aria-live': 'polite' });
+  const LABELS = { SEO_TITLE: 'titre', SEO_DESCRIPTION: 'description', SEO_INDEX: 'indexation' };
+  fill.addEventListener('click', () => {
+    const { values, problems } = parseAiAnswer(answer.value);
+    const keys = Object.keys(values).filter((k) => ctrls.has(k));
+    for (const k of keys) {
+      const c = ctrls.get(k);
+      let v = values[k];
+      // Interrupteur : la valeur par défaut est enregistrée vide (le réglage continue de la suivre).
+      if (k === 'SEO_INDEX' && v === (isOn(getResolver().fallback(k)) ? 'true' : 'false')) v = '';
+      c.setValue(v);
+      c.setError('');
+      c.el.classList.remove('is-filled');
+      void c.el.offsetWidth;
+      c.el.classList.add('is-filled');
+    }
+    onFilled();
+    const ok = keys.length > 0;
+    // Une clé inconnue ignorée n'empêche pas un remplissage réussi ; une valeur refusée ou absente, si.
+    const clean = ok && problems.every((m) => m.startsWith('Clé inconnue'));
+    const head = ok
+      ? `Champs remplis : ${keys.map((k) => LABELS[k]).join(', ')}. Vérifiez l’aperçu, puis enregistrez la section.`
+      : 'Aucun champ n’a pu être rempli.';
+    result.replaceChildren(h('div', { class: 'probe-msg ' + (clean ? 'is-ok' : 'is-err') },
+      h('span', { class: 'probe-icon', html: clean ? CHECK_ICON : WARN_ICON }),
+      h('div', {},
+        h('p', { class: 'probe-title', text: head }),
+        problems.length ? h('p', { text: clean ? 'Ignoré :' : ok ? 'Non repris :' : 'Ce qui n’a pas pu être lu :' }) : null,
+        problems.length ? h('ul', { class: 'ai-problems' }, problems.map((m) => h('li', { text: m }))) : null)));
+  });
+
+  return h('section', { class: 'ai', 'aria-labelledby': 'ai-title' },
+    h('div', { class: 'ai-head' },
+      h('span', { class: 'ai-icon', html: SPARK_ICON }),
+      h('div', {},
+        h('h3', { id: 'ai-title', text: 'Rédiger avec une IA' }),
+        h('p', { text: 'Une IA générative (ChatGPT, Claude, Le Chat, Gemini…) peut proposer le titre et la description à partir de votre configuration. mccs n’envoie rien : vous copiez le prompt dans l’IA de votre choix, puis vous collez sa réponse ici. Rien n’est enregistré avant « Enregistrer ».' }))),
+    h('ol', { class: 'ai-steps' },
+      h('li', {},
+        h('p', { class: 'ai-step-title', text: 'Copiez le prompt et collez-le dans l’IA' }),
+        h('p', { class: 'ai-step-help', text: 'Il décrit votre organisation, vos domaines, vos services et les valeurs actuelles. L’IA pourra d’abord vous poser quelques questions.' }),
+        h('div', { class: 'ai-actions' }, copy), show),
+      h('li', {},
+        h('label', { class: 'ai-step-title', for: answerId, text: 'Collez la réponse de l’IA' }),
+        h('p', { class: 'ai-step-help', text: 'Le premier bloc JSON est lu ; seuls le titre, la description et l’indexation sont repris.' }),
+        answer,
+        h('div', { class: 'ai-actions' }, fill),
+        result)));
 }
 
 /* ---------- Détection automatique de l'agenda et des contacts ---------- */
@@ -455,6 +627,7 @@ function renderRecap(resolve) {
   const summary = n
     ? `${n} réglage${n > 1 ? 's' : ''} modifié${n > 1 ? 's' : ''} ser${n > 1 ? 'ont' : 'a'} enregistré${n > 1 ? 's' : ''}.`
     : 'Vous n’avez rien modifié : « Mettre en ligne » confirme les réglages actuels.';
+  const indexed = isOn((fieldMap().get('SEO_INDEX') || {}).effective);
   wiz.recap.replaceChildren(
     h('p', { class: 'recap-summary', text: summary }),
     ...STEPS.slice(0, -1).map((s, i) => h('div', { class: 'recap-group' },
@@ -465,7 +638,11 @@ function renderRecap(resolve) {
         return h('div', { class: 'recap-row' + (c.isDirty() ? ' is-changed' : '') },
           h('dt', { text: c.field.label }),
           h('dd', {}, h('span', { class: ['host', 'port', 'url', 'domains', 'email'].includes(c.field.type) ? 'is-mono' : '', text: display(k, c.field.type, v) }), c.isDirty() ? h('span', { class: 'src src-pending', text: 'modifié' }) : null));
-      })))));
+      })))),
+    callout('', INFO_ICON, 'Référencement',
+      h('p', { text: indexed
+        ? 'La page d’accueil peut être indexée par les moteurs de recherche. Son titre, sa description et son image de partage se règlent dans Réglages › Référencement.'
+        : 'La page d’accueil n’est pas indexée par les moteurs de recherche, comme il convient à un outil interne. Pour la rendre trouvable, ou soigner son titre et son aperçu de partage, ouvrez Réglages › Référencement après la mise en ligne.' })));
 }
 
 function showWizardErrors(errors) {
@@ -524,9 +701,21 @@ function showWizardDone() {
     h('div', { class: 'wiz-done-actions' },
       h('a', { class: 'btn btn-primary', href: '/', target: '_blank', rel: 'noopener', text: 'Voir le site client' }),
       h('a', { class: 'btn btn-ghost', href: '#liens', text: 'Créer un lien client' }),
-      h('a', { class: 'btn btn-ghost', href: '#reglages', text: 'Ouvrir les réglages' }))));
+      h('a', { class: 'btn btn-ghost', href: '#reglages', text: 'Ouvrir les réglages' })),
+    h('p', { class: 'done-more' },
+      h('span', { text: 'Votre configurateur doit-il être trouvé dans Google ? ' }),
+      h('a', { class: 'link-inline', href: '#reglages', text: 'Régler le référencement', onclick: openSeoSettings }))));
   scrollTo({ top: 0 });
   $('#wizard h1').focus({ preventScroll: true });
+}
+
+// Ouvre l'onglet Réglages sur la section Référencement (après le défilement en haut fait par route()).
+function openSeoSettings(e) {
+  e.preventDefault();
+  const go = () => { const sec = $('#sec-seo'); if (sec) sec.scrollIntoView({ block: 'start' }); };
+  if (location.hash === '#reglages') { go(); return; }
+  addEventListener('hashchange', () => requestAnimationFrame(go), { once: true });
+  location.hash = '#reglages';
 }
 
 /* ================= Réglages ================= */
@@ -537,6 +726,7 @@ const SECTIONS = [
   { group: 'messages', title: 'Messages d’aide', lead: 'Ce que lit le client après la vérification de son mot de passe, pour chaque résultat. Texte simple ; un retour à la ligne commence un nouveau paragraphe. Vide : le texte par défaut, en gris.' },
   { group: 'dav', title: 'Calendrier et contacts', lead: 'Les adresses de synchronisation de l’agenda (CalDAV) et des contacts (CardDAV), détectées sur votre serveur.' },
   { group: 'public', title: 'Adresse publique', lead: 'L’adresse de ce configurateur, utilisée dans les liens et QR codes envoyés à vos clients.' },
+  { group: 'seo', title: 'Référencement', lead: 'Comment la page d’accueil apparaît dans les moteurs de recherche et quand son lien est partagé. Par défaut, elle n’est pas indexée : c’est un outil interne.' },
   { group: 'support', title: 'Contact support', lead: 'Les coordonnées montrées à vos clients s’ils ont besoin d’aide. Tout est facultatif : un champ vide n’apparaît pas.' },
   { group: 'profile', title: 'Profil Apple', lead: 'Le profil installe d’un coup la messagerie, l’agenda et les contacts sur iPhone, iPad et Mac.' },
 ];
@@ -607,6 +797,15 @@ function rebuildSettings() {
         off.textContent = 'La vérification du mot de passe est désactivée : ces messages ne sont pas montrés pour le moment.';
       });
       body = h('div', {}, off, h('div', { class: 'grid-2 msg-grid' }, keys.map(take)));
+    } else if (s.group === 'seo') {
+      const pv = seoPreview(set.ctrls);
+      const savedOf = () => { const m = fieldMap(); return { BRAND_LOGO_URL: (m.get('BRAND_LOGO_URL') || {}).effective, SEO_IMAGE: (m.get('SEO_IMAGE') || {}).effective }; };
+      set.updaters.push((r) => pv.update(r.resolve, savedOf()));
+      body = h('div', {},
+        h('div', { class: 'set-seo' },
+          h('div', { class: 'wiz-col' }, take('SEO_INDEX'), take('SEO_TITLE'), take('SEO_DESCRIPTION'), take('SEO_IMAGE'), keys.map(take)),
+          h('div', { class: 'wiz-aside' }, pv.node)),
+        seoAssistant(set.ctrls, getResolver, () => paintSettings()));
     } else if (s.group === 'support') {
       body = h('div', { class: 'grid-2' }, keys.map(take));
     } else {
