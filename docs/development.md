@@ -12,6 +12,7 @@ public/
   img/             favicon.svg, guides/
   support/         Internal support page
 docs/              Documentation
+tools/             build-demo.js and demo/ (static demo, see below)
 Dockerfile
 docker-compose.yml          Published image, port, volume
 docker-compose.build.yml    Build from the checkout
@@ -38,6 +39,34 @@ Run the unit tests with `npm test` (built-in `node --test`, no dependency; files
 
 At startup the server hashes CSS and JS and writes `?v=<hash>` into asset URLs, so a restart is enough to bust caches. `/brand.css` is generated from the settings and served `no-cache`; each save rewrites its `?v=` in the HTML with a hash of its content.
 - Settings: `server/settings.js` (fields and validation), `server/store.js` (`/data/config.json`), `server/config.js` (effective configuration, `settings.save()` reloads it in place).
+
+## Static demo
+
+`tools/build-demo.js` builds a demo that runs without a server, for static hosting under a path prefix (the one at `https://mccs.selfhostr.io/demo/`). It has no dependency either:
+
+```bash
+node tools/build-demo.js                       # or: npm run demo
+node tools/build-demo.js --out ~/dev/selfhostr-demos/mccs --base /demo/ \
+  --public-url https://mccs.selfhostr.io/demo --site https://mccs.selfhostr.io
+```
+
+Defaults: `--out dist/demo` (ignored by git), `--base /demo/`, `--public-url https://mccs.selfhostr.io/demo`, `--site https://mccs.selfhostr.io` (the banner links). The script:
+
+- copies `public/` and rewrites absolute paths (`href="/…"`, `src="/…"`, and `'/api/…'`, `'/support/…'`, `'/js/…'`, `/brand.css`, `/profile.mobileconfig` in the JavaScript) under the prefix, and stops if one is left;
+- renders the home page `<head>` with `server/seo.js` for the fictional brand of `tools/demo/seed.json` (Acme Mail, `example.com`, never indexed), and writes `api/config` and a neutral `brand.css`;
+- writes `demo-layer/demo.js`: the pure modules of `server/` (settings, validation, messages, SEO, Apple profile, brand stylesheet) wrapped for the browser, with `store.js` backed by `localStorage`, followed by `tools/demo/layer.js`, and `demo-layer/demo.css`. Both are loaded by the HTML pages as a classic script and a stylesheet, so the CSP stays `script-src 'self'; style-src 'self'`.
+
+In the browser, the layer answers `fetch()` for `/api/config`, `/api/test` and `/support/api/*` with the real validation and settings code, so `/support` works: sign-in (`support` / `demo`, filled in), setup assistant, settings, SEO preview, logo and background upload (kept as `data:` URLs), password change, customer links and QR codes. The server test and the CalDAV detection answer with simulated results for `*.example.com` and fail for other hosts: nothing leaves the browser. The brand colours are applied as CSS variables from `server/brand.js`, the Apple profile is built in the browser by `server/mobileconfig.js` and downloaded, and the password check (off by default) accepts `demo`. Settings and images stay in `localStorage` until "Réinitialiser" in the demo banner. Product code is not changed for the demo: the layer only wraps `fetch`, image `src` and `style.setProperty`.
+
+Headers for the demo path (Cloudflare Pages `_headers`):
+
+```
+/demo/*
+  ! Content-Security-Policy
+  Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; media-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+```
+
+A logo or share image given as an external `https://` address is blocked by this CSP in the demo (the real server adds its origin to `img-src`); uploaded images work.
 
 ## Contribute
 

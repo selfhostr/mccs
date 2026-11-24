@@ -1,0 +1,77 @@
+/* Démo statique de mccs (tools/build-demo.js) : bandeau, identifiants de connexion, note sous le profil Apple.
+   Jetons de public/css/app.css ; le bandeau reste neutre pour ne pas se confondre avec la marque de la démo. */
+.demo-bar {
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--border);
+  color: var(--muted);
+  font-size: .8125rem;
+  line-height: 1.35;
+}
+.demo-bar-in {
+  max-width: var(--container);
+  margin: 0 auto;
+  padding: 7px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 18px;
+  flex-wrap: wrap;
+}
+@media (min-width: 720px) { .demo-bar-in { padding: 7px 28px; } }
+.demo-lead, .demo-nav { margin: 0; display: flex; align-items: center; flex-wrap: wrap; }
+.demo-lead { gap: 10px; min-width: 0; }
+.demo-nav { gap: 4px 16px; }
+.demo-tag {
+  flex: none;
+  padding: 1px 8px;
+  border: 1px solid var(--warn-border);
+  border-radius: 999px;
+  background: var(--warn-bg);
+  color: var(--warn-text);
+  font-weight: 600;
+  letter-spacing: .01em;
+}
+.demo-say { color: var(--muted); }
+.demo-more { margin-left: -6px; }
+.demo-link {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  font: inherit;
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-color: var(--border-2);
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.demo-link:hover { text-decoration-color: currentColor; color: var(--text); }
+.demo-link:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
+@media (max-width: 899px) { .demo-more { display: none; } }
+@media (max-width: 599px) {
+  .demo-say { display: none; }
+  .demo-bar-in { flex-wrap: nowrap; }
+  .demo-nav { gap: 4px 14px; justify-content: flex-end; }
+}
+
+/* Page de connexion : identifiants de la démo, au-dessus du formulaire. */
+.demo-cred {
+  margin: 0 0 18px;
+  padding: 10px 14px;
+  border: 1px dashed var(--warn-border);
+  border-radius: var(--radius-sm);
+  background: var(--warn-bg);
+  font-size: .875rem;
+}
+.demo-cred p { margin: 0; }
+.demo-cred-title { font-weight: 600; color: var(--warn-text); }
+.demo-cred code { font-family: var(--mono); font-size: .92em; color: var(--text); }
+
+/* Sous le bouton « Télécharger le profil ». */
+.demo-note {
+  margin: 10px 0 0;
+  padding-top: 10px;
+  border-top: 1px dashed var(--border-2);
+  font-size: .78rem;
+  color: var(--muted);
+}

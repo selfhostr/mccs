@@ -6,7 +6,8 @@
   "main": "server/index.js",
   "scripts": {
     "start": "node server/index.js",
-    "test": "node --test"
+    "test": "node --test",
+    "demo": "node tools/build-demo.js"
   },
   "engines": {
     "node": ">=20"
