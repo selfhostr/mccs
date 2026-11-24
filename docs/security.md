@@ -72,7 +72,7 @@ The server does not sign on the fly; sign at a dedicated step or in front of the
 
 ## Deployment hardening
 
-Run behind an HTTPS reverse proxy (see [Reverse proxy and HTTPS](reverse-proxy.md)). The container is non-root, read-only, with all capabilities dropped and `no-new-privileges`.
+Run behind an HTTPS reverse proxy (see [Reverse proxy and HTTPS](reverse-proxy.md)). The app runs as the non-root `node` user (uid 1000) on a read-only filesystem with `no-new-privileges`. With the default compose file the container starts as root with only `CHOWN`, `SETUID`, `SETGID` and `DAC_READ_SEARCH`, gives `/data` to uid 1000, then drops root before loading the server; remove `user: "0:0"` and `cap_add` to start as uid 1000 directly (`/data` must then belong to it).
 
 ## What it does not protect
 

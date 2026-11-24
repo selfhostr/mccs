@@ -4,6 +4,14 @@ All notable changes to mccs. The format follows [Keep a Changelog](https://keepa
 
 ## Unreleased
 
+## [1.0.1] - 2026-11-24
+
+### Fixed
+
+- A host folder mounted on `/data` (for example `./mccs:/data`, created by Docker as root) left the admin area disabled (404) and the settings read-only, without a word. The container now starts as root only to give `/data` to the app user (uid 1000), then drops root before loading the server (`user: "0:0"` and `cap_add: [CHOWN, SETUID, SETGID, DAC_READ_SEARCH]` in `docker-compose.yml`). Older compose files keep working as before.
+- When `/data` is not writable, the logs say so and give the `chown` command to run.
+- The first sign-in message no longer gives the container port (8080) as the address: it points to the published port.
+
 ## [1.0.0] - 2026-11-23
 
 ### Added
@@ -38,4 +46,5 @@ All notable changes to mccs. The format follows [Keep a Changelog](https://keepa
 - The "Liens clients" tab no longer prepares an email or SMS (buttons, mobile number field and message texts removed): it gives the link to copy and the QR code (PNG or SVG) only.
 - Inter (text) and JetBrains Mono (code, identifiers, numbers), self-hosted under `public/fonts` with their SIL OFL 1.1 licences, replace the system font stacks. No third-party request is made for fonts.
 
+[1.0.1]: https://github.com/selfhostr/mccs/releases/tag/v1.0.1
 [1.0.0]: https://github.com/selfhostr/mccs/releases/tag/v1.0.0

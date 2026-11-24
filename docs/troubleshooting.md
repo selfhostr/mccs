@@ -6,7 +6,7 @@
 
 ## `/support` answers 404
 
-`/data` is not writable (is the `mccs-data` volume mounted?) and `SUPPORT_PASSWORD` is not set, so there is nowhere to keep a password. Mount a writable volume on `/data`, or set `SUPPORT_PASSWORD`, then restart.
+`/data` is not writable by the app user (uid 1000) and `SUPPORT_PASSWORD` is not set, so there is nowhere to keep a password. The logs say so at startup. With the compose file from v1.0.1, a host folder (`./mccs:/data`) is handed to uid 1000 by itself; with an older compose file, run `sudo chown -R 1000:1000 ./mccs` and `docker compose restart mccs`.
 
 ## I forgot the admin password
 
