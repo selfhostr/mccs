@@ -2,7 +2,7 @@
 
 All notable changes to mccs. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
-## Unreleased
+## [1.1.0] - 2026-11-24
 
 ### Added
 
@@ -55,5 +55,6 @@ All notable changes to mccs. The format follows [Keep a Changelog](https://keepa
 - The "Liens clients" tab no longer prepares an email or SMS (buttons, mobile number field and message texts removed): it gives the link to copy and the QR code (PNG or SVG) only.
 - Inter (text) and JetBrains Mono (code, identifiers, numbers), self-hosted under `public/fonts` with their SIL OFL 1.1 licences, replace the system font stacks. No third-party request is made for fonts.
 
+[1.1.0]: https://github.com/selfhostr/mccs/releases/tag/v1.1.0
 [1.0.1]: https://github.com/selfhostr/mccs/releases/tag/v1.0.1
 [1.0.0]: https://github.com/selfhostr/mccs/releases/tag/v1.0.0
