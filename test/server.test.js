@@ -42,9 +42,18 @@ test('la CSP autorise l’origine d’un logo externe enregistré', async () => 
   assert.match(r.headers.get('content-security-policy'), /img-src 'self' data: https:\/\/cdn\.acme\.ch;/);
 });
 
-test('le HTML référence /brand.css sans numéro de version', async () => {
-  const html = await (await fetch(base + '/')).text();
-  assert.match(html, /href="\/brand\.css"/);
+// Un proxy ou un CDN peut garder /brand.css malgré no-cache : l'URL change avec son contenu.
+test('le HTML référence /brand.css avec une version qui suit les réglages', async () => {
+  const ref = async (u) => (await (await fetch(base + u)).text()).match(/href="(\/brand\.css\?v=[0-9a-f]+)"/);
+  settings.save({ BRAND_ACCENT: '#123456' });
+  const before = await ref('/');
+  assert.ok(before, 'lien versionné dans /');
+  for (const u of ['/404.html', '/support/login.html']) assert.equal((await ref(u))[1], before[1], u);
+  settings.save({ BRAND_ACCENT: '#654321' });
+  const after = await ref('/');
+  assert.notEqual(after[1], before[1]);
+  assert.equal((await ref('/support/login.html'))[1], after[1]);
+  assert.match(await (await fetch(base + after[1])).text(), /--accent: #654321;/);
 });
 
 test('un nom avec apostrophe typographique ne fait pas planter /support', async () => {

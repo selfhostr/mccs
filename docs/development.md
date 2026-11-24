@@ -36,7 +36,7 @@ Run the unit tests with `npm test` (built-in `node --test`, no dependency; files
 - The manual-settings and help panels are `<dialog>` elements in `public/index.html`, opened by `[data-panel]`.
 - `public/css/app.css` is also loaded by `/support`: keep its classes.
 
-At startup the server hashes CSS and JS and writes `?v=<hash>` into asset URLs, so a restart is enough to bust caches. `/brand.css` is generated from the settings, never versioned and served `no-cache`.
+At startup the server hashes CSS and JS and writes `?v=<hash>` into asset URLs, so a restart is enough to bust caches. `/brand.css` is generated from the settings and served `no-cache`; each save rewrites its `?v=` in the HTML with a hash of its content.
 - Settings: `server/settings.js` (fields and validation), `server/store.js` (`/data/config.json`), `server/config.js` (effective configuration, `settings.save()` reloads it in place).
 
 ## Contribute

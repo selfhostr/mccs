@@ -86,7 +86,7 @@ const withV = (u) => u + '?v=' + BUILD;
 for (const [u, f] of files) {
   let txt;
   if (f.ext === '.html') {
-    // /brand.css change avec les réglages : jamais versionné (servi en no-cache).
+    // /brand.css change avec les réglages : versionné par son propre contenu dans refresh().
     txt = f.body.toString('utf8').replace(/((?:href|src)=")(\/[^"?#]+\.(?:css|js))(")/g, (m, a, b, c) => (b === '/brand.css' ? m : a + withV(b) + c));
   } else if (f.ext === '.js') {
     txt = f.body.toString('utf8').replace(/(\bfrom\s*')([^'?]+\.js)(')/g, (m, a, b, c) => a + withV(b) + c);
@@ -115,6 +115,10 @@ function brandCss() {
 
 // Page d'accueil telle que chargée (assets versionnés), avant l'insertion du <head> de référencement.
 const INDEX_TEMPLATE = files.get('/index.html').body.toString('utf8');
+// Pages qui chargent /brand.css : leur lien porte un hash du contenu (?v=…), recalculé à chaque
+// enregistrement, pour qu'un proxy ou un CDN qui garde les .css malgré no-cache serve la nouvelle version.
+const BRAND_PAGES = new Map([...files].filter(([, f]) => f.ext === '.html' && f.body.includes('href="/brand.css"')).map(([u, f]) => [u, f.body.toString('utf8')]));
+const BRAND_HREF = /href="\/brand\.css"/g;
 
 // Tout ce qui dépend des réglages, recalculé au démarrage et après chaque enregistrement.
 let configJson;
@@ -127,8 +131,13 @@ const live = (text, ext) => {
 function refresh() {
   SECURITY_HEADERS['Content-Security-Policy'] = buildCsp();
   configJson = Buffer.from(JSON.stringify(Object.assign(publicConfig(), { shots: GUIDE_SHOTS })));
-  files.set('/brand.css', live(brandCss(), '.css'));
-  files.set('/index.html', live(injectHead(INDEX_TEMPLATE, renderHead(config)), '.html'));
+  const css = brandCss();
+  files.set('/brand.css', live(css, '.css'));
+  const href = 'href="/brand.css?v=' + crypto.createHash('sha256').update(css).digest('hex').slice(0, 10) + '"';
+  for (const [u, html] of BRAND_PAGES) {
+    const page = u === '/index.html' ? injectHead(INDEX_TEMPLATE, renderHead(config)) : html;
+    files.set(u, live(page.replace(BRAND_HREF, href), '.html'));
+  }
   robots = Buffer.from(robotsTxt(config));
   const xml = sitemapXml(config);
   sitemap = xml === null ? null : Buffer.from(xml);
