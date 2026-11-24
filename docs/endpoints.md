@@ -11,7 +11,7 @@ Only `GET` and `HEAD` are accepted, except `POST` and `PUT` on `/support/api/*` 
 | `/mail/config-v1.1.xml?emailaddress=` | Thunderbird autoconfig (also at `/.well-known/autoconfig/mail/`) |
 | `/api/config` | Public settings, read by the browser; nothing secret. Includes `connectionTest` (boolean) and `testMessages` (`{ imap: { status: text }, smtp: {...}, rate_limited, domain }`) |
 | `POST /api/test` | Password check, see below. 404 while `CONNECTION_TEST` is off |
-| `/brand.css` | Generated accent colour and page background, `no-cache` |
+| `/brand.css` | Generated accent colour and page background, `no-cache`; the HTML links it as `/brand.css?v=<hash of its content>` |
 | `/healthz` | Health check, answers `ok` |
 
 ## Password check: `POST /api/test`
