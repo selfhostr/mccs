@@ -13,9 +13,13 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - mccs-data:/data
+      - mccs-data:/data   # or a host folder: ./mccs:/data
+    # Starts as root only to give /data to the app user, then drops root for good:
+    # a host folder (./mccs:/data) works as it is.
+    user: "0:0"
     read_only: true
     cap_drop: [ALL]
+    cap_add: [CHOWN, SETUID, SETGID, DAC_READ_SEARCH]
     security_opt: ["no-new-privileges:true"]
 
 volumes:

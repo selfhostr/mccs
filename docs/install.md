@@ -13,9 +13,10 @@ docker compose logs mccs
 The compose file holds only the image, the port, the `mccs-data` volume and the hardening: no `.env`, no variable. On the first start the logs print the admin user (`support`), a generated password and the address `http://<your-server>:8080/support`. Open it: the setup assistant takes it from there (see [Admin area](support-page.md)).
 
 - To change the port, edit the `ports` line, for example `"8443:8080"`.
+- To keep the settings in a host folder instead of the volume, use `./mccs:/data`. The container starts as root only to give that folder to the app user (uid 1000), then drops root for good (`user: "0:0"` and the four `cap_add` capabilities); without them, run `sudo chown -R 1000:1000 ./mccs` yourself.
 - Environment variables are still read by the server, as an advanced option: add them under `environment:` in the compose file (see [Configuration](configuration.md)).
 - Update with `docker compose pull && docker compose up -d` (see [Upgrade](upgrading.md)).
-- The image is based on `node:22-alpine` and runs as the `node` user, with a read-only filesystem, `no-new-privileges` and all capabilities dropped. A healthcheck calls `/healthz` every 30 seconds.
+- The image is based on `node:25-alpine` and the app runs as the `node` user (uid 1000), with a read-only filesystem and `no-new-privileges`; the only capabilities kept are those needed to hand `/data` over before dropping root. A healthcheck calls `/healthz` every 30 seconds.
 - Logs use the `json-file` driver, capped at 2 files of 5 MB.
 
 Tags: `vX.Y.Z` releases publish `:X.Y.Z`, `:X.Y`, `:X` and `:latest`; the `main` branch publishes `:edge`.

@@ -232,8 +232,8 @@ const server = http.createServer((req, res) => {
 
 server.keepAliveTimeout = 65000;
 // Importé (tests, outils) : pas d'écoute automatique.
-module.exports = { server, settings };
-if (require.main === module) {
+module.exports = { server, settings, start };
+function start() {
   let initial = null;
   try { initial = admin.firstRun(); } catch (err) { console.error(`Mot de passe de première connexion impossible à créer : ${err.message}`); }
   server.listen(config.port, '0.0.0.0', () => {
@@ -241,22 +241,29 @@ if (require.main === module) {
       console.log([
         '',
         '  Première connexion à mccs',
-        `  Ouvrez       http://<adresse-du-serveur>:${config.port}/support`,
+        '  Ouvrez       http://<adresse-du-serveur>:<port publié, 8080 par défaut>/support',
         `  Identifiant  ${config.supportAuth.user}`,
         `  Mot de passe ${initial.password}`,
         '  Changez-le ensuite (menu du compte > Changer le mot de passe) : ce message disparaîtra.',
         '',
       ].join('\n'));
     }
+    if (!settings.writable) {
+      console.error([
+        '',
+        `  ${DATA_DIR} n'est pas accessible en écriture (utilisateur ${process.getuid ? process.getuid() : '?'}) : réglages en lecture seule${admin.enabled() ? '' : ' et page /support désactivée'}.`,
+        `  Si ${DATA_DIR} est un dossier de l'hôte : sudo chown -R 1000:1000 <ce dossier>, puis docker compose restart mccs.`,
+        '',
+      ].join('\n'));
+    }
     console.log(`mccs à l'écoute sur :${config.port} (${files.size} fichiers statiques, ${GUIDE_SHOTS.length} captures, page /support ${admin.enabled() ? 'active' : 'désactivée'}, réglages ${settings.writable ? 'dans ' + DATA_DIR : 'en lecture seule'})`);
   });
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 }
 
 function shutdown() {
   server.close(() => process.exit(0));
   setTimeout(() => process.exit(0), 3000).unref();
 }
-if (require.main === module) {
-  process.on('SIGTERM', shutdown);
-  process.on('SIGINT', shutdown);
-}
+if (require.main === module) start();
